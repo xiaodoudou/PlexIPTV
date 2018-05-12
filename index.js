@@ -18,6 +18,7 @@ class Server {
 
     // Bindings
     this.pullPlaylist = this.pullPlaylist.bind(this)
+    this.readPlaylist = this.readPlaylist.bind(this)
     this.proxy = this.proxy.bind(this)
   }
 
@@ -25,7 +26,11 @@ class Server {
     this.config.init().then(settings => {
       this.settings = settings
       this.express.serverPort = settings.serverPort
-      this.pullPlaylist().then((m3u8) => {
+      let getPlaylist = this.pullPlaylist
+      if (this.settings.doNotPullRemotePlaylist) {
+        getPlaylist = this.readPlaylist
+      }
+      getPlaylist().then((m3u8) => {
         let defaultChannel = 80000
         const parsingRule = /#EXTINF:(.*),(.*)[\r\n]+(.*)/gm
         let match
@@ -74,19 +79,29 @@ class Server {
     })
   }
 
+  readPlaylist () {
+    const deferred = Q.defer()
+    fs.readFile(this.settings.m3u8.local, 'utf8', (error, body) => {
+      if (error) {
+        deferred.reject(error)
+      } else {
+        Logger.warn('Fallback using local file...')
+        deferred.resolve(body)
+      }
+    })
+    return deferred.promise
+  }
+
   pullPlaylist () {
     const deferred = Q.defer()
     Logger.info(`Pulling remote playlist: ${this.settings.m3u8.remote}`)
     request(this.settings.m3u8.remote, (error, response, body) => {
       if (error) {
         Logger.error('Error happen during playlist pull:', error)
-        fs.readFile(this.settings.m3u8.local, 'utf8', (error, body) => {
-          if (error) {
-            deferred.reject(error)
-          } else {
-            Logger.warn('Fallback using local file...')
-            deferred.resolve(body)
-          }
+        this.readPlaylist().then((m3u8) => {
+          deferred.resolve(m3u8)
+        }).catch((error) => {
+          deferred.reject(error)
         })
       } else {
         Logger.verbose('Writting to local files...')
