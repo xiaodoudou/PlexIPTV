@@ -1,0 +1,47 @@
+{
+  "name": "plexiptv",
+  "version": "1.0.0",
+  "description": "Emulate Silicondust device for Plex by providing IPTV stream",
+  "engines": {
+    "node": ">=8.9.0"
+  },
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "debug": "set DEBUG=plexiptv:* & node index.js",
+    "debug:full": "set DEBUG=* & node index.js",
+    "build": "rmdir build /S /Q & mkdir build & pkg index.js --targets node8-macos-x64,node8-linux-x64,node8-win-x64 -o build\\PlexIPTV"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "clean-stack": "^1.3.0",
+    "colors": "^1.2.4",
+    "debug": "^3.1.0",
+    "express": "^4.16.3",
+    "filendir": "^1.0.1",
+    "install": "^0.11.0",
+    "lodash": "^4.17.10",
+    "log-rotate": "^0.2.8",
+    "md5": "^2.2.1",
+    "moment": "^2.22.1",
+    "node-ssdp": "^3.3.0",
+    "once": "^1.2.0",
+    "pkg": "^4.3.1",
+    "q": "^1.5.1",
+    "request": "2.27.0",
+    "stack-trace": "0.0.10",
+    "supports-color": "^5.4.0",
+    "valid-url": "^1.0.9"
+  },
+  "devDependencies": {
+    "eslint": "^4.19.1",
+    "eslint-config-standard": "^11.0.0",
+    "eslint-plugin-import": "^2.11.0",
+    "eslint-plugin-node": "^6.0.1",
+    "eslint-plugin-sort-class-members": "^1.3.1",
+    "eslint-plugin-standard": "^3.1.0",
+    "sort-class-members-codemod": "^0.5.1",
+    "standard": "^11.0.1"
+  }
+}

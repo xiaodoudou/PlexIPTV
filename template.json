@@ -1,0 +1,20 @@
+{
+  "m3u8": {
+    "local": "iptv.m3u8",
+    "remote": "https://raw.githubusercontent.com/notanewbie/My-Legalstream/master/notanewbie-legalstream.m3u8"
+  },
+  "serverPort": 1234,
+  "serverName": "PlexIPTV",
+  "tunerCount": 1,
+  "removeIfNotFoundOnFilter": true,
+  "filter": [
+    {
+      "name": ">>> US News",
+      "channel": "1"
+    },
+    {
+      "name": ">>> World News",
+      "channel": "2"
+    }
+  ]
+}
