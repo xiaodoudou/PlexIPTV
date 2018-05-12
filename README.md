@@ -21,15 +21,15 @@ Please provide me the full logs of what is happenning by doing on:
 
 - Linux
 ```bash
-DEBUG=* ./PlexIPTV-linux
+DEBUG=* ./PlexIPTV.linux.x64
 ```
 - MacOS
 ```bash
-DEBUG=* ./PlexIPTV-macos
+DEBUG=* ./PlexIPTV.macos.x64
 ```
 - Windows
 ```powershell
-set DEBUG=* & PlexIPTV-win.exe & set debug =
+set DEBUG=* & PlexIPTV.win.x64.exe & set debug =
 ```
 
 ## Settings
@@ -56,3 +56,8 @@ set DEBUG=* & PlexIPTV-win.exe & set debug =
   ]
 }
 ```
+
+## How to build yourself the app?
+After have run `yarn`, if you are on windows you can use:
+- for powershell/cmd: `npm run build:ps`
+- for bash/sh: `npm run build:sh`

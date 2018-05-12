@@ -10,7 +10,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "debug": "set DEBUG=plexiptv:* & node index.js",
     "debug:full": "set DEBUG=* & node index.js",
-    "build": "rmdir build /S /Q & mkdir build & pkg index.js --targets node8-macos-x64,node8-linux-x64,node8-win-x64 -o build\\PlexIPTV"
+    "build:ps": "rmdir build /S /Q & mkdir build & pkg index.js --targets node8-macos-x64,node8-linux-x64,node8-win-x64 -o build\\PlexIPTV",
+    "build:sh": "rm -rf build & mkdir build & pkg index.js --targets node8-macos-x64,node8-linux-x64,node8-win-x64 -o build/PlexIPTV"
   },
   "author": "",
   "license": "ISC",
