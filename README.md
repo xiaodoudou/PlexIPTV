@@ -14,6 +14,9 @@ It does:
 - proxy the IPTV stream so only the server will be seen as the "user"
 - allow multiple concurent views into the same channel even if the provider block it
 
+## Downloads
+You can download the last version on the [release page](https://github.com/xiaodoudou/PlexIPTV/releases)
+
 ## OS
 This app has been tested on windows, however it should work for all systems. If any isuse encounter, feel freel to create an issue.
 
