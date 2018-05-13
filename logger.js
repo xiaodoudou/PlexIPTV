@@ -1,7 +1,7 @@
 const packageJson = require('./package.json')
 const _ = require('lodash')
 if (_.get(process, 'env.DEBUG', false) === false) {
-  _.set(process, 'env.DEBUG', `${packageJson.name}:*:info,${packageJson.name}:*:warn,${packageJson.name}:*:error`)
+  _.set(process, 'env.DEBUG', `${packageJson.name}:*:info,${packageJson.name}:*:warn,${packageJson.name}:*:error,${packageJson.name}:*:verbose`)
 }
 const colors = require('colors')
 const createDebug = require('debug')
