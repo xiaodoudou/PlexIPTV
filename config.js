@@ -1,5 +1,5 @@
-var fs = require('fs')
-var template = require('./template.json')
+const fs = require('fs')
+const template = require('./template.json')
 const _ = require('lodash')
 const Q = require('q')
 const Logger = new (require('./logger'))()

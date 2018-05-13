@@ -8,6 +8,7 @@ const Preloader = require('./preloader')
 const DVR = require('./dvr')
 const Config = require('./config')
 const Logger = new (require('./logger'))()
+const packageJson = require('./package.json')
 
 class Server {
   constructor () {
@@ -71,7 +72,7 @@ class Server {
           myDvr.init()
           this.express.use('/channel/:channelId', this.proxy)
           this.express.listen(this.express.serverPort, () => {
-            Logger.info(`Server is started at: http://localhost:${this.express.serverPort} \t📺🍺~~ Enjoy your ${this.channels.length} channels ~~🍺📺\t`)
+            Logger.info(`Server (v${packageJson.version}) is started at: http://localhost:${this.express.serverPort} \t📺🍺~~ Enjoy your ${this.channels.length} channels ~~🍺📺\t`)
           })
         })
       }).catch((error) => {
