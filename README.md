@@ -76,6 +76,12 @@ If you want build a specific target you can do for example `npm run build:win:x6
 
 ## Changelogs
 ```
+current work in progress:
+ - docker persistent configuration file and tweaks
+ 
+1.0.2:
+ - fix bug related to channel number was given as a int and not a string (require by plex)
+ 
 1.0.1:
  - add option to avoid pulling online playlist
  - add a docker container
