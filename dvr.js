@@ -64,10 +64,7 @@ class DVR {
   }
 
   channels (req) {
-    let hostname = `http://${this.express.serverHost}:${this.express.serverPort}`
-    if (!_.isUndefined(req)) {
-      hostname = req.protocol + '://' + req.get('host')
-    }
+    const hostname = req.protocol + '://' + req.get('host')
     const lines = []
     _.forEach(this.server.channels, (line) => {
       lines.push({
