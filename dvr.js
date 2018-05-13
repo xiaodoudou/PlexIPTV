@@ -17,8 +17,8 @@ class DVR {
     this.manufacturer = 'Silicondust'
     this.modelName = 'HDHR - Plex - IPTV'
     this.modelNumber = 'HDHR-PLEX-IPTV'
-    this.serialNumber = '001002003'
-    this.deviceId = '0123456789'
+    this.serialNumber = this.server.settings.serialNumber
+    this.deviceId = this.server.settings.deviceId
     this.firmwareVersion = `${this.version.major}.${this.version.minor}`
     this.firmwareName = `plex-iptv-${this.firmwareVersion}`
     this.tunerCount = this.server.settings.tunerCount

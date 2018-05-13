@@ -6,6 +6,8 @@
   "serverPort": 1234,
   "serverName": "PlexIPTV",
   "tunerCount": 1,
+  "deviceId": "001002003",
+  "serialNumber": "0123456789",
   "removeIfNotFoundOnFilter": true,
   "doNotPullRemotePlaylist": false,
   "filter": [
