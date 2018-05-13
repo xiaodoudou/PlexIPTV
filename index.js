@@ -66,11 +66,13 @@ class Server {
         this.channels = _.orderBy(this.channels, (line) => {
           return Number(line.channel)
         })
-        const myDvr = new DVR(this)
-        myDvr.init()
-        this.express.use('/channel/:channelId', this.proxy)
-        this.express.listen(this.express.serverPort, () => {
-          Logger.info(`Server is started at: http://localhost:${this.express.serverPort} \t📺🍺~~ Enjoy ~~🍺📺\t`)
+        process.nextTick(() => {
+          const myDvr = new DVR(this)
+          myDvr.init()
+          this.express.use('/channel/:channelId', this.proxy)
+          this.express.listen(this.express.serverPort, () => {
+            Logger.info(`Server is started at: http://localhost:${this.express.serverPort} \t📺🍺~~ Enjoy your ${this.channels.length} channels ~~🍺📺\t`)
+          })
         })
       }).catch((error) => {
         Logger.error('Failed to get locale playlist:', error)
@@ -85,7 +87,7 @@ class Server {
       if (error) {
         deferred.reject(error)
       } else {
-        Logger.warn('Fallback using local file...')
+        Logger.warn('Will use local file...')
         deferred.resolve(body)
       }
     })

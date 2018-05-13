@@ -47,6 +47,7 @@ set DEBUG=* & PlexIPTV.win.x64.exe & set debug =
   "serverName": "PlexIPTV", // Name of the server
   "tunerCount": 1, // How many simultaneous feed your IPTV provider support
   "removeIfNotFoundOnFilter": true, // Will remove channel from playlist that aren't present on the filter list
+  "doNotPullRemotePlaylist": false, // Will not pul online playlist
   "filter": [ // Filter list
     {
       "name": ">>> US News", // Regex of the name to match on the playlist
@@ -60,12 +61,27 @@ set DEBUG=* & PlexIPTV.win.x64.exe & set debug =
 }
 ```
 
+## Docker
+You can pull the image by doing `docker pull xiaodoudoufr/plexiptv`, then you can run it by `docker run -p 12345:1234 -d xiaodoudoufr/plexiptv`
+
 ## TODO:
 - [x] Option to avoid pulling online playlist
-- [ ] Docker container
+- [x] Docker container
 - [ ] Merge multiples online playlist
 
 ## How to build yourself the app?
 After have run `yarn`, if you are on windows you can use:
 - for powershell/cmd: `npm run build:ps`
 - for bash/sh: `npm run build:sh`
+
+
+## Changelogs
+```
+1.0.1:
+ - add option to avoid pulling online playlist
+ - add a docker container
+
+1.0.0:
+ - first release
+
+```
