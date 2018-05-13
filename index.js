@@ -26,6 +26,7 @@ class Server {
   init () {
     this.config.init().then(settings => {
       this.settings = settings
+      this.express.serverHost = settings.serverHost
       this.express.serverPort = settings.serverPort
       let getPlaylist = this.pullPlaylist
       if (this.settings.doNotPullRemotePlaylist) {
@@ -75,7 +76,7 @@ class Server {
           myDvr.init()
           this.express.use('/channel/:channelId', this.proxy)
           this.express.listen(this.express.serverPort, () => {
-            Logger.info(`Server (v${packageJson.version}) is started at: http://localhost:${this.express.serverPort} \t📺🍺~~ Enjoy your ${this.channels.length} channels ~~🍺📺\t`)
+            Logger.info(`Server (v${packageJson.version}) is started at: http://${this.express.serverHost}:${this.express.serverPort} \t📺🍺~~ Enjoy your ${this.channels.length} channels ~~🍺📺\t`)
           })
         })
       }).catch((error) => {
