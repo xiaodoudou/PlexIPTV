@@ -75,7 +75,7 @@ class Server {
           const myDvr = new DVR(this)
           myDvr.init()
           this.express.use('/channel/:channelId', this.proxy)
-          this.express.listen(this.express.serverPort, () => {
+          this.express.listen(this.express.serverPort, this.express.serverHost, () => {
             Logger.info(`Server (v${packageJson.version}) is started at: http://${this.express.serverHost}:${this.express.serverPort} \t📺🍺~~ Enjoy your ${this.channels.length} channels ~~🍺📺\t`)
           })
         })

@@ -4,7 +4,7 @@
     "remote": "https://raw.githubusercontent.com/notanewbie/My-Legalstream/master/notanewbie-legalstream.m3u8"
   },
   "serverPort": 1234,
-  "serverHost": "localhost",
+  "serverHost": "0.0.0.0",
   "serverName": "PlexIPTV",
   "tunerCount": 1,
   "deviceId": "001002003",
