@@ -9,7 +9,7 @@ RUN yarn --production
 
 COPY . .
 
-RUN sed -i 's/localhost/0.0.0.0/g' settings.json
+RUN sed -i 's/localhost/0.0.0.0/g' template.json
 
 EXPOSE 1245
 
