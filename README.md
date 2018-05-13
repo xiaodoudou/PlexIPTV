@@ -60,6 +60,11 @@ set DEBUG=* & PlexIPTV.win.x64.exe & set debug =
 }
 ```
 
+## TODO:
+- [x] Option to avoid pulling online playlist
+- [ ] Docker container
+- [ ] Merge multiples online playlist
+
 ## How to build yourself the app?
 After have run `yarn`, if you are on windows you can use:
 - for powershell/cmd: `npm run build:ps`
