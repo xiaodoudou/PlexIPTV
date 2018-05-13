@@ -67,6 +67,9 @@ class Server {
         this.channels = _.orderBy(this.channels, (line) => {
           return Number(line.channel)
         })
+        if (Number(settings.limit) > 0) {
+          this.channels = this.channels.slice(0, settings.limit)
+        }
         process.nextTick(() => {
           const myDvr = new DVR(this)
           myDvr.init()

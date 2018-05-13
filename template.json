@@ -10,6 +10,7 @@
   "serialNumber": "0123456789",
   "removeIfNotFoundOnFilter": true,
   "doNotPullRemotePlaylist": false,
+  "limit": -1,
   "filter": [
     {
       "name": ">>> US News",
