@@ -64,7 +64,7 @@ class DVR {
   }
 
   channels (req) {
-    let hostname = `http://localhost:${this.express.serverPort}`
+    let hostname = `http://${this.express.serverHost}:${this.express.serverPort}`
     if (!_.isUndefined(req)) {
       hostname = req.protocol + '://' + req.get('host')
     }
