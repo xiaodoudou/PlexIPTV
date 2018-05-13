@@ -5,12 +5,13 @@ const request = require('request')
 const Logger = new (require('./logger'))()
 
 class Worker extends EventEmitter {
-  constructor (guid, url) {
+  constructor (guid, line) {
     super()
 
     // Declares
     this.guid = guid
-    this.url = url
+    this.line = line
+    this.url = line.url
     this.listeners = 0
     this.stream = new DataStream()
 
@@ -34,12 +35,12 @@ class Worker extends EventEmitter {
   }
 
   end () {
-    Logger.verbose(`End of: ${this.url}`)
+    Logger.verbose(`End of: ${this.line.internalUrl}`)
     this.emit('end', this.guid)
   }
 
   unsubscribe () {
-    Logger.verbose(`Unsubscribe to: ${this.url}`)
+    Logger.verbose(`Unsubscribe to: ${this.line.internalUrl}`)
     this.listeners = this.listeners - 1
     if (this.listeners <= 0) {
       Logger.verbose('No more subscribers.')
@@ -49,16 +50,17 @@ class Worker extends EventEmitter {
   }
 
   subscribe () {
-    Logger.verbose(`Subscribe to: ${this.url}`)
+    Logger.verbose(`Subscribe to: ${this.line.internalUrl}`)
     this.listeners = this.listeners + 1
   }
 
   requestFactory () {
-    Logger.verbose(`Preloading: ${this.url}`)
+    Logger.verbose(`Preloading: ${this.line.internalUrl} (${this.url})`)
     let myRequest = request(this.url)
-    myRequest.once('end', () => {
+    myRequest.once('end', (error) => {
+      console.log(error)
       if (!this.stream.isEnded) {
-        Logger.verbose(`Renew preloading: ${this.url}`)
+        Logger.verbose(`Renew preloading: ${this.internalUrl}`)
         this.request = this.requestFactory(this.url)
       }
     })
