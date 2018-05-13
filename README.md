@@ -70,9 +70,8 @@ You can pull the image by doing `docker pull xiaodoudoufr/plexiptv`, then you ca
 - [ ] Merge multiples online playlist
 
 ## How to build yourself the app?
-After have run `yarn`, if you are on windows you can use:
-- for powershell/cmd: `npm run build:ps`
-- for bash/sh: `npm run build:sh`
+After have run `yarn`, if you are on windows you can use: `npm run build` which will trigger all builds (windows, macos, linux, docker).
+If you want build a specific target you can do for example `npm run build:win:x64`.
 
 
 ## Changelogs
