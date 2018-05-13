@@ -9,6 +9,8 @@ RUN yarn --production
 
 COPY . .
 
+RUN sed -i 's/localhost/0.0.0.0/g' settings.json
+
 EXPOSE 1245
 
 CMD [ "npm", "start" ]
