@@ -55,7 +55,7 @@ class Server {
               defaultChannel++
             }
             const line = {
-              channel,
+              channel: `${channel}`,
               name,
               url
             }
