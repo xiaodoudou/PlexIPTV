@@ -49,15 +49,31 @@ class Server {
             parsingRule.lastIndex++
           }
           if (match.length === 4 && validUrl.isUri(match[3])) {
-            const name = match[2]
+            const meta = match[1]
+            let name = match[2]
             const url = match[3]
             let channel = defaultChannel
             let found = false
             _.forEach(settings.filter, (filter) => {
-              if (name.search(filter.name) !== -1) {
-                channel = filter.channel
-                found = true
-                return false
+              let nameFilter = _.get(filter, 'name', false)
+              let metaFilter = _.get(filter, 'meta', false)
+              if (!nameFilter || !metaFilter) {
+                if (nameFilter !== false) {
+                  nameFilter = name.search(nameFilter) !== -1
+                } else {
+                  nameFilter = true
+                }
+                if (metaFilter !== false) {
+                  metaFilter = meta.search(metaFilter) !== -1
+                } else {
+                  metaFilter = true
+                }
+                if (nameFilter && metaFilter) {
+                  name = _.get(filter, 'rename', name)
+                  channel = filter.channel
+                  found = true
+                  return false
+                }
               }
             })
             if (!found && !settings.removeIfNotFoundOnFilter) {

@@ -18,8 +18,14 @@
       "channel": "1"
     },
     {
-      "name": ">>> World News",
+      "name": "^AMC$",
+      "meta": "I254\\.59337\\.schedulesdirect\\.org",
       "channel": "2"
+    },
+    {
+      "meta": "I254\\.59337\\.schedulesdirect\\.org",
+      "rename": "AMC",
+      "channel": "3"
     }
   ]
 }
