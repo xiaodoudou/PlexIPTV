@@ -60,7 +60,7 @@ class Config {
 
   mergeWriteSettings (userSettings) {
     const deferred = Q.defer()
-    const settings = _.merge({}, template, userSettings)
+    const settings = _.assign({}, template, userSettings)
     const json = JSON.stringify(settings, null, 2)
     fs.writeFile(this.filename, json, 'utf8', (error) => {
       if (error) {
