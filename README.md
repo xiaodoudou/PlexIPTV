@@ -78,6 +78,7 @@ You can pull the image by doing `docker pull xiaodoudoufr/plexiptv`, then you ca
 - [x] Option to avoid pulling online playlist
 - [x] Docker container
 - [ ] Merge multiples online playlist
+- [ ] Resolving nesting playlist
 
 ## How to build yourself the app?
 After have run `yarn`, if you are on windows you can use: `npm run build` which will trigger all builds (windows, macos, linux, docker).
@@ -87,7 +88,19 @@ If you want build a specific target you can do for example `npm run build:win:x6
 ## Changelogs
 ```
 current work in progress:
- - docker persistent configuration file and tweaks
+ - online playlist merging
+ - investigating why buffer is failing on some specific IPTV vendor
+ 
+1.0.4:  
+ - fix settings / template merging
+ - add rename feature
+ - add meta filtering
+
+1.0.3:
+ - allow config file path to be changed `--settings [path/file.json`
+ - allow log path to be change through param `--logdir [path]`
+ - add helper if app is called with `--help`
+ - allow docker container to mount volume againts `/opt/PlexIPTV/config` to preserve config
  
 1.0.2:
  - fix bug related to channel number was given as a int and not a string (require by plex)
