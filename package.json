@@ -1,6 +1,6 @@
 {
   "name": "plexiptv",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Emulate Silicondust device for Plex by providing IPTV stream",
   "engines": {
     "node": ">=8.9.0"
@@ -8,6 +8,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "start:docker": "node index.js -s `pwd`/config/settings.json",
     "start": "node index.js",
     "debug": "set DEBUG=plexiptv:* & node index.js",
     "debug:full": "set DEBUG=* & node index.js",
@@ -19,12 +20,10 @@
     "build:macos:x86": "pkg index.js --targets node8-macos-x86 -o build/PlexIPTV.macos.x86",
     "build:linux:x64": "pkg index.js --targets node8-linux-x64 -o build/PlexIPTV.linux-x64",
     "build:linux:x86": "pkg index.js --targets node8-linux-x86 -o build/PlexIPTV.linux-x86",
-    "build:docker": "run-s docker:build docker:start docker:log",
     "build": "run-s build:**",
-    "docker:build": "docker build -t xiaodoudoufr/plexiptv .",
-    "docker:start": "docker run -p 12345:1234 -d xiaodoudoufr/plexiptv",
-    "docker:log": "echo off & set CONTAINER_ID= & (for /f \"tokens=1 delims= \" %G in ('docker ps') do ( set CONTAINER_ID=%G )) & docker logs %CONTAINER_ID%",
-    "docker:publish": "docker push xiaodoudoufr/plexiptv"
+    "docker": "run-s docker:build docker:start",
+    "docker:build": "docker build -t plexiptv .",
+    "docker:start": "docker run --rm -p 12345:1234 --volume=c:/Users/Public/plexiptv:/opt/PlexIPTV/config plexiptv"
   },
   "author": "",
   "license": "ISC",

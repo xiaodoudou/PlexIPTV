@@ -2,7 +2,7 @@ const path = require('path')
 const args = require('args')
 
 args
-  .option('logdir', 'The path where the log files will be written', process.cwd())
+  .option('logdir', 'The path where the log files will be written', path.join(process.cwd(), 'logs'))
   .option('settings ', 'Path of the configuration file', path.join(process.cwd(), 'settings.json'))
 
 const _ = require('lodash')
@@ -16,6 +16,7 @@ const DVR = require('./dvr')
 const Config = require('./config')
 const Logger = new (require('./logger'))()
 const packageJson = require('./package.json')
+const flags = args.parse(process.argv)
 
 class Server {
   constructor () {
@@ -83,7 +84,10 @@ class Server {
           myDvr.init()
           this.express.use('/channel/:channelId', this.proxy)
           this.express.listen(this.express.serverPort, this.express.serverHost, () => {
-            Logger.info(`Server (v${packageJson.version}) is started at: http://${this.express.serverHost}:${this.express.serverPort} \t📺🍺~~ Enjoy your ${this.channels.length} channels ~~🍺📺\t`)
+            Logger.info(`Server (v${packageJson.version}) is started at: http://${this.express.serverHost}:${this.express.serverPort}`)
+            Logger.info(`Logs output: ${flags.logdir}`)
+            Logger.info(`Config file: ${flags.settings}`)
+            Logger.info(`📺🍺~~Enjoy your ${this.channels.length} channels ~~🍺📺\t`)
           })
         })
       }).catch((error) => {
