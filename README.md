@@ -62,7 +62,7 @@ set DEBUG=* & PlexIPTV.win.x64.exe & set debug =
 ```
 
 ## Docker
-You can pull the image by doing `docker pull xiaodoudoufr/plexiptv`, then you can run it by `docker run -p 12345:1234 -d xiaodoudoufr/plexiptv`
+You can pull the image by doing `docker pull xiaodoudoufr/plexiptv`, then you can run it by `docker run -p 12345:1234 --volume [your config path]:/opt/PlexIPTV/config -d xiaodoudoufr/plexiptv`
 
 ## TODO:
 - [x] Option to avoid pulling online playlist
