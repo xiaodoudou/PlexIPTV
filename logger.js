@@ -12,7 +12,9 @@ const path = require('path')
 const rotate = require('log-rotate')
 const stackTrace = require('stack-trace')
 const util = require('util')
-const logPath = `${process.cwd()}/logs.txt`
+const args = require('args')
+const flags = args.parse(process.argv)
+const logPath = `${flags.logdir}/logs.txt`
 
 class Logger {
   constructor () {

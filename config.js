@@ -3,11 +3,13 @@ const template = require('./template.json')
 const _ = require('lodash')
 const Q = require('q')
 const Logger = new (require('./logger'))()
+const args = require('args')
+const flags = args.parse(process.argv)
 
 class Config {
   constructor () {
     // Declares
-    this.filename = 'settings.json'
+    this.filename = flags.settings
 
     // Bindings
     this.init = this.init.bind(this)

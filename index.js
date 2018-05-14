@@ -1,3 +1,10 @@
+const path = require('path')
+const args = require('args')
+
+args
+  .option('logdir', 'The path where the log files will be written', process.cwd())
+  .option('settings ', 'Path of the configuration file', path.join(process.cwd(), 'settings.json'))
+
 const _ = require('lodash')
 const express = require('express')
 const Q = require('q')
