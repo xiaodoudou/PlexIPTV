@@ -55,8 +55,18 @@ set DEBUG=* & PlexIPTV.win.x64.exe & set debug =
     },
     {
       "name": ">>> World News",
+      "remame": "World News", // Will rename the channel to "World News"
       "channel": "2"
-    }
+    },
+    {
+      "meta": "I254\\.59337\\.schedulesdirect\\.org", // Will map channel if the meta tag contain I254.59337.schedulesdirect.org
+      "channel": "3"
+    },
+    {
+      "name": ">>> Cartoons", // Will map channel if name contains ">>> Cartoons" and ...
+      "meta": "I251\\.59331\\.schedulesdirect\\.org", // if the meta tag contain I251.59331.schedulesdirect.org
+      "channel": "4"
+    },
   ]
 }
 ```
