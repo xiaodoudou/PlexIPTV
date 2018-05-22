@@ -47,21 +47,22 @@ class DVR {
     this.express.use(this.lineStatusUrl, this.lineupStatus)
     this.express.use(this.discoverUrl, this.discover)
     this.express.use(this.deviceUrl, this.device)
-
-    const ssdpServer = new SSDP({
+    this.ssdpServer = new SSDP({
       location: {
         port: this.express.serverPort,
         path: '/device.xml'
       },
+      udn: `f10c2345-7329-40b7-8b04-27${this.serialNumber}`,
       allowWildcards: true,
+      adInterval: 5000,
       ssdpSig: `${this.friendlyName}/${this.firmwareVersion} UPnP/1.0`
     })
 
-    ssdpServer.addUSN('upnp:rootdevice')
-    ssdpServer.addUSN('urn:schemas-upnp-org:device:MediassdpServer:1')
-    ssdpServer.addUSN('urn:schemas-upnp-org:service:ContentDirectory:1')
-    ssdpServer.addUSN('urn:schemas-upnp-org:service:ConnectionManager:1')
-    ssdpServer.start()
+    this.ssdpServer.addUSN('upnp:rootdevice')
+    this.ssdpServer.addUSN('urn:schemas-upnp-org:device:MediassdpServer:1')
+    this.ssdpServer.addUSN('urn:schemas-upnp-org:service:ContentDirectory:1')
+    this.ssdpServer.addUSN('urn:schemas-upnp-org:service:ConnectionManager:1')
+    this.ssdpServer.start()
     Logger.verbose('DVR is now initiated.')
   }
 
