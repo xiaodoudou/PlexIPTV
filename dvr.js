@@ -13,6 +13,8 @@ class DVR {
     this.express = this.server.express
     this.scanPossible = 0
     this.scanInProgress = 0
+    this.scanFound = 0
+    this.scanProgress = 0
     this.friendlyName = this.server.settings.serverName
     this.manufacturer = 'Silicondust'
     this.modelName = 'HDHR - Plex - IPTV'
@@ -83,26 +85,44 @@ class DVR {
   }
 
   scan (req, res, next) {
-    // TODO Need to know what Plex is expecting to simulate properly a scan
     Logger.verbose(`Received a scan request.`)
+    process.nextTick(() => {
+      res.json({})
+    })
     this.scanPossible = 0
     this.scanInProgress = 1
+    const delay = 10
+    let progressDelay = delay
+    let counter = 1
+    _.forEach(this.server.channels, (item) => {
+      setTimeout(() => {
+        this.scanFound = counter
+        this.scanProgress = Math.floor(counter / this.server.channels.length)
+        counter = counter + 1
+      }, progressDelay)
+      progressDelay = delay + progressDelay
+    })
     setTimeout(() => {
-      res.json(this.status())
-      process.nextTick(() => {
-        this.scanPossible = 1
-        this.scanInProgress = 0
-      })
-    }, 5000)
+      this.scanPossible = 1
+      this.scanInProgress = 0
+    }, progressDelay)
   }
 
   status () {
-    const status = {
+    let status = {
       ScanInProgress: this.scanInProgress,
       ScanPossible: this.scanPossible,
       Source: 'Cable',
       SourceList: ['Cable']
     }
+    if (this.scanInProgress) {
+      status = {
+        ScanInProgress: this.scanInProgress,
+        Progress: this.scanProgress,
+        Found: this.scanFound
+      }
+    }
+
     return status
   }
 
