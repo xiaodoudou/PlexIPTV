@@ -8,9 +8,9 @@ I created that app for several reaons:
 
 ___
 
-Note that currently it seems only MPEG2 TS stream playlist are supported (which is covert by xtream code api providers).
+Note that currently it seems only MPEG2 TS stream playlist are supported (which is cover by any xtream code providers).
 
-If your provider is doing nested playlist, it will result an error message from Plex saying "Unable to tune channel"
+If your provider is doing nested playlist, it will result an error message from Plex saying "Unable to tune channel".
 
 ## What it does?
 It does:
