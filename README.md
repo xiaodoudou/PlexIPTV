@@ -6,6 +6,12 @@ I created that app for several reaons:
 - Not enougth flexible for my use (telly: https://github.com/tombowditch/telly)
 - None of the existing projects where pulling a remote playlist
 
+___
+
+Note that currently it seems only MPEG2 TS stream playlist are supported (which is cover by any xtream code providers).
+
+If your provider is doing nested playlist, it will result an error message from Plex saying "Unable to tune channel".
+
 ## What it does?
 It does:
 - pull remote m3u8 file to a local file
