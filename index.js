@@ -1,11 +1,11 @@
 const path = require('path')
 const args = require('args')
+const _ = require('lodash')
 
 args
-  .option('logdir', 'The path where the log files will be written', path.join(process.cwd(), 'logs'))
-  .option('settings ', 'Path of the configuration file', path.join(process.cwd(), 'settings.json'))
+  .option('logdir', 'The path where the log files will be written', _.get(process, 'env.PLEXIPTV_LOGDIR', path.join(process.cwd(), 'logs')))
+  .option('settings ', 'Path of the configuration file', _.get(process, 'env.PLEXIPTV_SETTINGS', path.join(process.cwd(), 'settings.json')))
 
-const _ = require('lodash')
 const express = require('express')
 const Q = require('q')
 const request = require('request')
