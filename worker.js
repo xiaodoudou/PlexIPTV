@@ -1,5 +1,6 @@
 const EventEmitter = require('events')
 const once = require('once') // eslint-disable-line no-unused-vars
+const _ = require('lodash')
 const DataStream = require('./dataStream')
 const request = require('request')
 const Logger = new (require('./logger'))()
@@ -56,11 +57,22 @@ class Worker extends EventEmitter {
 
   requestFactory () {
     Logger.verbose(`Preloading: ${this.line.internalUrl} (${this.url})`)
-    let myRequest = request(this.url)
-    myRequest.once('end', (error) => {
-      console.log(error)
+    let myRequest = request({
+      url: this.url,
+      headers: {
+        'User-Agent': 'vlc 3.0.3'
+      }
+    }, (error, response, body) => {
+      if (_.get(response, 'statusCode', 'Unknown') !== '200') {
+        Logger.warn(`Remote stream replied: ${_.get(response, 'statusMessage', 'Unknown Error')} (${_.get(response, 'statusCode', 'Unknown')})`)
+      }
+      if (error) {
+        Logger.error('Error occured:', error)
+      }
+    })
+    myRequest.once('end', () => {
       if (!this.stream.isEnded) {
-        Logger.verbose(`Renew preloading: ${this.internalUrl}`)
+        Logger.verbose(`Renew preloading: ${this.line.internalUrl}`)
         this.request = this.requestFactory(this.url)
       }
     })

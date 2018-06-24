@@ -156,10 +156,10 @@ class Server {
     Logger.verbose(`Receive a proxy for: ${req.params.channelId}`)
     const line = _.find(this.channels, (line) => line.channel === req.params.channelId)
     const hostname = req.protocol + '://' + req.get('host')
+    line.internalUrl = `${hostname}/channel/${line.channel}`
     if (!line) {
       return res.send('channel id not found')
     }
-    line.internalUrl = `${hostname}/channel/${line.channel}`
     let isCanceled = false
     let isEnded = false
     const worker = this.preloader.preload(line)
