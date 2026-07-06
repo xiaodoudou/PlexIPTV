@@ -143,7 +143,7 @@ class Server {
           if (error) {
             deferred.reject(error)
           } else {
-            Logger.info(`Sucessfully saved playlist to: ${this.settings.m3u8.local}`)
+            Logger.info(`Successfully saved playlist to: ${this.settings.m3u8.local}`)
             deferred.resolve(body)
           }
         })
