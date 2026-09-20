@@ -2,6 +2,10 @@ const dns = require('dns')
 const net = require('net')
 
 const ALLOWED_PROTOCOLS = ['http:', 'https:']
+// Protocols a channel may use. RTSP is not fetched by this process: it is
+// handed to ffmpeg, which speaks it natively. It is still validated here so a
+// playlist cannot point the tuner at an internal address.
+const STREAM_PROTOCOLS = ['http:', 'https:', 'rtsp:', 'rtsps:']
 
 /**
  * Parses an IPv4 literal into its 32-bit unsigned integer representation.
@@ -119,6 +123,7 @@ function isPrivateAddress (address) {
  */
 function assertSafeUrl (rawUrl, options) {
   const allowPrivateNetwork = Boolean(options && options.allowPrivateNetwork)
+  const protocols = (options && options.protocols) || ALLOWED_PROTOCOLS
   if (typeof rawUrl !== 'string' || rawUrl.trim().length === 0) {
     throw new Error('Refusing to fetch an empty URL')
   }
@@ -130,8 +135,9 @@ function assertSafeUrl (rawUrl, options) {
     throw new Error(`Refusing to fetch a malformed URL: ${redactUrl(rawUrl)}`)
   }
 
-  if (ALLOWED_PROTOCOLS.indexOf(parsed.protocol) === -1) {
-    throw new Error(`Refusing to fetch unsupported protocol "${parsed.protocol}" - only http and https are allowed`)
+  if (protocols.indexOf(parsed.protocol) === -1) {
+    const allowed = protocols.map((entry) => entry.replace(':', '')).join(', ')
+    throw new Error(`Refusing to fetch unsupported protocol "${parsed.protocol}" - only ${allowed} are allowed`)
   }
 
   if (!allowPrivateNetwork) {
@@ -234,8 +240,27 @@ function redactUrl (rawUrl) {
   return `${parsed.toString()}${hadQuery ? '?<redacted>' : ''}`
 }
 
+/**
+ * Validates a channel URL, which may be RTSP as well as HTTP.
+ */
+function assertStreamUrl (rawUrl, options) {
+  return assertSafeUrl(rawUrl, Object.assign({}, options, { protocols: STREAM_PROTOCOLS }))
+}
+
+function isRtsp (rawUrl) {
+  try {
+    const protocol = new URL(rawUrl).protocol
+    return protocol === 'rtsp:' || protocol === 'rtsps:'
+  } catch (error) {
+    return false
+  }
+}
+
 module.exports = {
   ALLOWED_PROTOCOLS,
+  STREAM_PROTOCOLS,
+  assertStreamUrl,
+  isRtsp,
   XTREAM_CREDENTIAL_PATH,
   assertSafeUrl,
   extractCredentials,

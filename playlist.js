@@ -1,4 +1,4 @@
-const { assertSafeUrl, redactUrl } = require('./netGuard')
+const { assertStreamUrl, redactUrl } = require('./netGuard')
 const Logger = new (require('./logger'))()
 
 const PARSING_RULE = /#EXTINF:(.*),(.*)[\r\n]+(.*)/gm
@@ -13,7 +13,7 @@ const DEFAULT_CHANNEL = 80000
  */
 function isStreamableUrl (url, allowPrivateNetwork) {
   try {
-    assertSafeUrl(url, { allowPrivateNetwork })
+    assertStreamUrl(url, { allowPrivateNetwork })
     return true
   } catch (error) {
     Logger.warn(`Skipping channel with an unusable URL: ${error.message}`)
