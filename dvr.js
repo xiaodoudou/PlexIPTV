@@ -132,7 +132,9 @@ class DVR {
     for (const item of this.server.channels) { // eslint-disable-line no-unused-vars
       setTimeout(() => {
         this.scanFound = counter
-        this.scanProgress = Math.floor(counter / this.server.channels.length)
+        // A fraction floored to an integer is 0 until the very last channel,
+        // so the scan appeared stuck at 0% throughout.
+        this.scanProgress = Math.floor((counter / this.server.channels.length) * 100)
         counter = counter + 1
       }, progressDelay)
       progressDelay = delay + progressDelay
@@ -172,7 +174,7 @@ class DVR {
     const status = {
       FriendlyName: this.friendlyName,
       Manufacturer: this.manufacturer,
-      ModelNumber: this.modelName,
+      ModelNumber: this.modelNumber,
       FirmwareName: this.firmwareName,
       TunerCount: this.tunerCount,
       FirmwareVersion: this.firmwareVersion,

@@ -111,3 +111,29 @@ test('lineup status reports the documented shape', () => {
     SourceList: ['Cable']
   })
 })
+
+test('scan progress is a percentage, not a fraction floored to zero', async () => {
+  const channels = []
+  for (let i = 0; i < 10; i++) channels.push({ channel: `${i}`, name: `C${i}`, url: `http://x.example/${i}.ts` })
+  const dvr = makeDvr({}, channels)
+
+  dvr.scan({}, { json () {} })
+  await new Promise((resolve) => setTimeout(resolve, 80))
+
+  // Math.floor(counter / length) is 0 for every channel but the last, so the
+  // scan used to sit at 0 and then jump straight to done.
+  assert.ok(dvr.scanProgress > 0, `expected progress above 0, got ${dvr.scanProgress}`)
+  assert.ok(dvr.scanProgress <= 100, `expected a percentage, got ${dvr.scanProgress}`)
+  dvr.scanInProgress = 0
+})
+
+test('discover reports the model number, not the model name', () => {
+  const dvr = makeDvr()
+  let payload = null
+  dvr.discover(fakeReq('localhost:1234'), { json (body) { payload = body } })
+
+  assert.strictEqual(payload.ModelNumber, 'HDHR-PLEX-IPTV')
+  assert.notStrictEqual(payload.ModelNumber, payload.FirmwareName)
+  // The human readable name still appears in device.xml.
+  assert.ok(dvr.deviceXml(fakeReq('localhost:1234')).includes('HDHR - Plex - IPTV'))
+})
