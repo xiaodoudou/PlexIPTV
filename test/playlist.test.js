@@ -228,3 +228,56 @@ test('rename applies to every channel a filter matches', () => {
   assert.deepStrictEqual(channels.map((line) => line.name), ['British', 'British', 'British'])
   assert.deepStrictEqual(channels.map((line) => line.channel), ['10', '11', '12'])
 })
+
+test('a filter that matches nothing says so, with the escaped form to copy', () => {
+  // Four separate issues in the tracker were a filter silently matching
+  // nothing. Reported literally, a "+" is a quantifier, not a plus sign.
+  const { escapeHint } = require('../playlist')
+  const hint = escapeHint('Canal + 1 HD PL')
+  assert.match(hint, /regular expressions/)
+  assert.match(hint, /Canal/)
+  assert.ok(hint.includes('+'), 'the corrected pattern is offered verbatim')
+})
+
+test('no escaping hint is offered for a pattern that has nothing to escape', () => {
+  const { escapeHint } = require('../playlist')
+  assert.strictEqual(escapeHint('BBC One HD'), '')
+  assert.strictEqual(escapeHint(undefined), '')
+  assert.strictEqual(escapeHint(123), '')
+})
+
+test('a plus sign in a channel name survives parsing untouched', () => {
+  // Verified against the reports: the tuner handles "+" correctly. What fails
+  // is a filter typed literally.
+  const playlist = [
+    '#EXTM3U',
+    '#EXTINF:-1 tvg-id="CanalPlus1.pl" tvg-logo="http://x/a.png",Canal + 1 HD PL',
+    'http://cdn.example.com/1.ts',
+    '#EXTINF:-1,Canal+',
+    'http://cdn.example.com/2.ts',
+    ''
+  ].join('\n')
+  const channels = parsePlaylist(playlist, { removeIfNotFoundOnFilter: false })
+  assert.deepStrictEqual(channels.map((line) => line.name), ['Canal + 1 HD PL', 'Canal+'])
+})
+
+test('an escaped plus matches the channel it names', () => {
+  const playlist = ['#EXTM3U', '#EXTINF:-1,Canal + 1 HD PL', 'http://cdn.example.com/1.ts', ''].join('\n')
+  const literal = parsePlaylist(playlist, { removeIfNotFoundOnFilter: true, filter: [{ name: 'Canal + 1 HD PL', channel: '1' }] })
+  assert.deepStrictEqual(literal, [], 'typed literally it matches nothing, which is the trap')
+
+  const escaped = parsePlaylist(playlist, { removeIfNotFoundOnFilter: true, filter: [{ name: 'Canal \\+ 1 HD PL', channel: '1' }] })
+  assert.deepStrictEqual(escaped.map((line) => line.name), ['Canal + 1 HD PL'])
+})
+
+test('a comma inside group-title does not swallow the channel name', () => {
+  // Attribute values may contain commas; the name is what follows the last one.
+  const playlist = [
+    '#EXTM3U',
+    '#EXTINF:-1 tvg-logo="http://x/b.png" group-title="MOVIE, HBO",HBO',
+    'http://cdn.example.com/2.ts',
+    ''
+  ].join('\n')
+  const channels = parsePlaylist(playlist, { removeIfNotFoundOnFilter: false })
+  assert.deepStrictEqual(channels.map((line) => line.name), ['HBO'])
+})
