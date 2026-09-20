@@ -40,6 +40,10 @@ function parsePlaylist (m3u8, settings) {
   const allowPrivateNetwork = Boolean(config.allowPrivateNetwork)
   const filters = Array.isArray(config.filter) ? config.filter : []
   const channels = []
+  // How many channels each filter has already claimed, so a filter matching
+  // more than one channel can number them consecutively instead of giving them
+  // all the same number.
+  const filterUsage = new Map()
   let defaultChannel = DEFAULT_CHANNEL
   let match
 
@@ -55,38 +59,56 @@ function parsePlaylist (m3u8, settings) {
     const meta = match[1]
     let name = match[2]
     const url = match[3]
-    let channel = defaultChannel
+    let channel = null
     let found = false
 
-    for (const filter of filters) {
-      let nameFilter = filter && filter.name !== undefined ? filter.name : false
-      let metaFilter = filter && filter.meta !== undefined ? filter.meta : false
-      if (!nameFilter || !metaFilter) {
-        if (nameFilter !== false) {
-          nameFilter = matchesPattern(name, nameFilter)
-        } else {
-          nameFilter = true
+    for (let index = 0; index < filters.length; index++) {
+      const filter = filters[index]
+      if (!filter) continue
+      const namePattern = filter.name !== undefined ? filter.name : false
+      const metaPattern = filter.meta !== undefined ? filter.meta : false
+
+      // A filter with neither pattern matches every channel, which collapses
+      // the whole lineup onto one number. That is never what anyone means.
+      if (namePattern === false && metaPattern === false) {
+        if (!filterUsage.has(`warned:${index}`)) {
+          filterUsage.set(`warned:${index}`, true)
+          Logger.warn(`Ignoring filter #${index + 1}: it sets neither "name" nor "meta", so it would match every channel.`)
         }
-        if (metaFilter !== false) {
-          metaFilter = matchesPattern(meta, metaFilter)
-        } else {
-          metaFilter = true
-        }
-        if (nameFilter && metaFilter) {
-          name = filter.rename !== undefined ? filter.rename : name
-          channel = filter.channel
-          found = true
-          break
-        }
+        continue
       }
+
+      // Both patterns have to match when both are given. The previous
+      // implementation guarded this whole block with `if (!name || !meta)`,
+      // so a filter specifying both - the combined form the README documents -
+      // could never match anything.
+      if (namePattern !== false && !matchesPattern(name, namePattern)) continue
+      if (metaPattern !== false && !matchesPattern(meta, metaPattern)) continue
+
+      name = filter.rename !== undefined ? filter.rename : name
+      const base = Number(filter.channel)
+      if (Number.isFinite(base)) {
+        // Consecutive numbering from the filter's channel. Every match used to
+        // be given the identical number, and Plex keeps only one channel per
+        // number, so a filter like "UK" collapsed to a single entry.
+        const used = filterUsage.get(index) || 0
+        channel = base + used
+        filterUsage.set(index, used + 1)
+      }
+      // else: the filter matched but named no channel, so it falls through to
+      // auto-numbering below instead of becoming the string "undefined".
+      found = true
+      break
     }
 
-    if (!found && !config.removeIfNotFoundOnFilter) {
+    if (!found && config.removeIfNotFoundOnFilter) {
+      continue
+    }
+    if (channel === null) {
+      channel = defaultChannel
       defaultChannel++
     }
-    if (found || (!found && !config.removeIfNotFoundOnFilter)) {
-      channels.push({ channel: `${channel}`, name, url })
-    }
+    channels.push({ channel: `${channel}`, name, url })
   }
 
   const ordered = channels.sort((a, b) => Number(a.channel) - Number(b.channel))

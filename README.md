@@ -86,6 +86,40 @@ it is in `.gitignore` — keep it that way.
 }
 ```
 
+### How filters behave
+
+**`name` and `meta` are regular expressions, not plain text.** Characters that
+are punctuation to a regex have to be escaped, and in JSON the backslash itself
+has to be doubled:
+
+| To match | Write |
+| --- | --- |
+| `TVA (FR)` | `"name": "TVA \\(FR\\)"` |
+| `Canal+` | `"name": "Canal\\+"` |
+| `Sky Sports F1` | `"name": "Sky Sports F1"` (nothing to escape) |
+
+Unescaped, `Canal+` means "Cana" followed by one or more `l`, and `TVA (FR)`
+matches `TVA FR` without the brackets — which is why those filters appear to do
+nothing. An invalid pattern is reported in the log and skipped rather than
+taking the server down.
+
+**A filter that matches several channels numbers them consecutively** from its
+`channel`. A filter of `"name": "^UK:"` with `"channel": "100"` gives the first
+match 100, the next 101, and so on. Plex keeps only one channel per number, so
+without this a whole group would collapse into a single entry.
+
+**Omit `channel`** and matching channels are auto-numbered from 80000 instead.
+
+**Filter a whole group** through `meta`, which is matched against the entire
+`#EXTINF` line, including `group-title`:
+
+```javascript
+{ "meta": "group-title=\"FRENCH\"", "channel": "1" }
+```
+
+**When both `name` and `meta` are given, both must match.** A filter that sets
+neither is ignored, since it would otherwise claim every channel.
+
 ## Security
 
 Two points matter when you deploy:
@@ -158,6 +192,17 @@ dependencies that actually ship.
 current work in progress:
  - online playlist merging
  - investigating why buffer is failing on some specific IPTV vendor
+
+1.1.1:
+ - fix: a filter matching several channels now numbers them consecutively
+   instead of giving them all the same number (#21)
+ - fix: a filter with no "channel" auto-numbers instead of producing the
+   literal channel "undefined" (#21)
+ - fix: a filter setting both "name" and "meta" never matched anything, so the
+   combined form the README documents (and template.json ships) did not work
+ - fix: a filter setting neither "name" nor "meta" claimed every channel; it is
+   now ignored with a warning
+ - docs: spell out that filters are regular expressions and need escaping (#27)
 
 1.1.0:
  - security: stop writing provider credentials to the log file, settings and playlist cache
