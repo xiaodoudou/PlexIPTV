@@ -8,9 +8,10 @@ I created that app for several reaons:
 
 ___
 
-Note that currently it seems only MPEG2 TS stream playlist are supported (which is cover by any xtream code providers).
-
-If your provider is doing nested playlist, it will result an error message from Plex saying "Unable to tune channel".
+Both raw MPEG-TS streams and HLS (m3u8) streams are supported. If your
+provider hands out an m3u8 playlist rather than a `.ts` stream, PlexIPTV
+follows it and stitches the segments into the continuous transport stream Plex
+expects. See [Streams and formats](#streams-and-formats).
 
 ## What it does?
 It does:
@@ -19,6 +20,7 @@ It does:
 - settings can help to filter play list and remap the channels
 - proxy the IPTV stream so only the server will be seen as the "user"
 - allow multiple concurent views into the same channel even if the provider block it
+- follow HLS (m3u8) streams and serve them to Plex as MPEG-TS
 
 ## Downloads
 You can download the last version on the [release page](https://github.com/xiaodoudou/PlexIPTV/releases)
@@ -120,6 +122,32 @@ without this a whole group would collapse into a single entry.
 **When both `name` and `meta` are given, both must match.** A filter that sets
 neither is ignored, since it would otherwise claim every channel.
 
+## Streams and formats
+
+Plex expects an HDHomeRun tuner to deliver a continuous MPEG-TS stream. What a
+provider actually serves varies, and PlexIPTV now handles each case:
+
+| The provider serves | What happens |
+| --- | --- |
+| Raw MPEG-TS (`.ts`) | Forwarded byte for byte. |
+| HLS with TS segments (`.m3u8` → `.ts`) | The playlist is followed and its segments are joined into one stream. No transcoding: HLS TS segments already *are* MPEG-TS. |
+| HLS with fragmented MP4 segments (`.m3u8` → `.m4s`) | Repackaged with ffmpeg using `-c copy`. Audio and video are **not** re-encoded, so the cost is small and quality is untouched. Requires ffmpeg. |
+| An error page with a `200` status | Reported as a `502` naming the reason, instead of being handed to Plex as if it were video. |
+
+A live HLS stream is joined at the **live edge** rather than from the start of
+the playlist window, so a channel does not begin half a minute in the past.
+
+### ffmpeg
+
+ffmpeg is optional and only needed for the fragmented-MP4 case, which is
+uncommon among IPTV providers. Without it, such channels report a clear message
+instead of failing silently. Put `ffmpeg` on `PATH`, or point `PLEXIPTV_FFMPEG`
+at the binary. Set `PLEXIPTV_FFMPEG=none` to refuse to start it at all.
+
+Segments are always downloaded by PlexIPTV and piped into ffmpeg over stdin, so
+ffmpeg never opens a network connection of its own and the protections below
+stay in force.
+
 ## Security
 
 Two points matter when you deploy:
@@ -145,7 +173,7 @@ only.
 - [x] Option to avoid pulling online playlist
 - [x] Docker container
 - [ ] Merge multiples online playlist
-- [ ] Resolving nesting playlist
+- [x] Resolving nesting playlist (HLS)
 
 ## How to build yourself the app?
 Requires Node.js 22 or newer. After running `npm install`, `npm run build`
@@ -192,6 +220,17 @@ dependencies that actually ship.
 current work in progress:
  - online playlist merging
  - investigating why buffer is failing on some specific IPTV vendor
+
+1.2.0:
+ - HLS (m3u8) streams are now supported: the playlist is followed and its
+   segments are served to Plex as a continuous MPEG-TS stream (#8)
+ - fragmented MP4 HLS segments are repackaged with ffmpeg (-c copy, no
+   re-encoding); ffmpeg is optional and only needed for that case
+ - a provider that answers with an error page and a 200 status is reported as
+   a 502 naming the reason, instead of being streamed to Plex as if it were
+   video (this is what "Unable to tune channel" usually was)
+ - live HLS streams are joined at the live edge rather than replaying the
+   playlist window
 
 1.1.1:
  - fix: a filter matching several channels now numbers them consecutively
