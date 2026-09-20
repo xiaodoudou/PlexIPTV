@@ -113,12 +113,14 @@ test('a channel URL pointing at the internal network is refused by the worker', 
 })
 
 test('subscribe and unsubscribe track listeners and end the worker at zero', () => {
+  // lingerMs: 0 keeps this focused on the counting. The hold-open behaviour
+  // that now applies by default has its own tests below.
   const worker = new Worker('guid-5', {
     channel: '5',
     name: 'Counting',
     url: 'http://provider.example/stream.ts',
     internalUrl: 'http://localhost:1234/channel/5'
-  }, { retryDelay: 10000, maxConsecutiveFailures: 1 })
+  }, { retryDelay: 10000, maxConsecutiveFailures: 1, lingerMs: 0 })
 
   let ended = 0
   worker.on('end', () => ended++)
@@ -221,4 +223,93 @@ test('an Xtream style stream URL is never logged with its credentials', async ()
   assert.ok(!log.includes(FAKE_PASSWORD), 'the password must never be logged')
   assert.ok(!log.includes(FAKE_USERNAME), 'the username must never be logged')
   assert.ok(log.includes('506638'), 'the stream id is still logged')
+})
+
+test('issue #30: the upstream is held open briefly so a reconnect does not restart it', async (t) => {
+  let connections = 0
+  const server = http.createServer((req, res) => {
+    connections++
+    res.writeHead(200, { 'Content-Type': 'video/mp2t' })
+    const chunk = Buffer.alloc(376, 0x11)
+    chunk[0] = 0x47
+    chunk[188] = 0x47
+    const timer = setInterval(() => res.write(chunk), 40)
+    req.on('close', () => clearInterval(timer))
+  })
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
+  t.after(() => server.close())
+  const port = server.address().port
+
+  const worker = new Worker('guid-linger', {
+    channel: '20',
+    name: 'Linger',
+    url: `http://127.0.0.1:${port}/stream`,
+    internalUrl: 'http://localhost:1234/channel/20'
+  }, { allowPrivateNetwork: true, lingerMs: 1500 })
+
+  await settle(200)
+  worker.subscribe()
+  await settle(200)
+  assert.strictEqual(connections, 1, 'one upstream connection')
+
+  // A player that drops and immediately reconnects, which Plex does routinely.
+  worker.unsubscribe()
+  assert.strictEqual(worker.lingerTimer !== null, true, 'the upstream is held open')
+  await settle(300)
+  worker.subscribe()
+  await settle(300)
+
+  assert.strictEqual(worker.lingerTimer, null, 'the linger was cancelled on reconnect')
+  assert.strictEqual(connections, 1, 'the reconnect reused the running upstream')
+  assert.strictEqual(worker.listeners, 1)
+
+  worker.unsubscribe()
+  worker.stream.end()
+  await settle(100)
+})
+
+test('the worker does end once the linger expires with nobody watching', async (t) => {
+  const server = http.createServer((req, res) => {
+    res.writeHead(200, { 'Content-Type': 'video/mp2t' })
+    const chunk = Buffer.alloc(376, 0x11)
+    chunk[0] = 0x47
+    chunk[188] = 0x47
+    const timer = setInterval(() => res.write(chunk), 40)
+    req.on('close', () => clearInterval(timer))
+  })
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
+  t.after(() => server.close())
+
+  const worker = new Worker('guid-linger-expire', {
+    channel: '21',
+    name: 'Expire',
+    url: `http://127.0.0.1:${server.address().port}/stream`,
+    internalUrl: 'http://localhost:1234/channel/21'
+  }, { allowPrivateNetwork: true, lingerMs: 300 })
+
+  worker.subscribe()
+  await settle(200)
+  const ended = new Promise((resolve) => worker.once('end', resolve))
+  worker.unsubscribe()
+  await ended
+  assert.strictEqual(worker.listeners, 0)
+  worker.stream.end()
+  await settle(100)
+})
+
+test('lingerMs of zero restores the immediate teardown', () => {
+  const worker = new Worker('guid-no-linger', {
+    channel: '22',
+    name: 'NoLinger',
+    url: 'http://provider.example/stream.ts',
+    internalUrl: 'http://localhost:1234/channel/22'
+  }, { lingerMs: 0, retryDelay: 10000 })
+
+  let ended = 0
+  worker.on('end', () => ended++)
+  worker.subscribe()
+  worker.unsubscribe()
+  assert.strictEqual(ended, 1, 'ends straight away when lingering is disabled')
+  assert.strictEqual(worker.lingerTimer, null)
+  worker.stream.end()
 })

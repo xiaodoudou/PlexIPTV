@@ -12,6 +12,9 @@ const Logger = new (require('./logger'))()
 // capped instead.
 const RETRY_DELAY = 1000
 const MAX_CONSECUTIVE_FAILURES = 5
+// How long an upstream is held open after the last viewer leaves, so a
+// reconnecting player rejoins the running stream instead of restarting it.
+const LINGER_MS = 5000
 
 class Worker extends EventEmitter {
   constructor (guid, line, options) {
@@ -30,6 +33,8 @@ class Worker extends EventEmitter {
       ? this.options.maxConsecutiveFailures
       : MAX_CONSECUTIVE_FAILURES
     this.retryTimer = null
+    this.lingerTimer = null
+    this.lingerMs = this.options.lingerMs != null ? this.options.lingerMs : LINGER_MS
     this.hls = null
     this.finalUrl = null
     this.stream = new DataStream()
@@ -55,6 +60,10 @@ class Worker extends EventEmitter {
         clearTimeout(this.retryTimer)
         this.retryTimer = null
       }
+      if (this.lingerTimer) {
+        clearTimeout(this.lingerTimer)
+        this.lingerTimer = null
+      }
       if (this.hls) {
         this.hls.stop()
         this.hls = null
@@ -71,14 +80,34 @@ class Worker extends EventEmitter {
   unsubscribe () {
     Logger.verbose(`Unsubscribe to: ${this.line.internalUrl}`)
     this.listeners = this.listeners - 1
-    if (this.listeners <= 0) {
+    if (this.listeners > 0) return
+    this.listeners = 0
+
+    if (this.lingerMs <= 0) {
       Logger.verbose('No more subscribers.')
-      this.listeners = 0
       this.end()
+      return
     }
+
+    // Hold the upstream open briefly instead of tearing it down the moment the
+    // last viewer leaves. Players reconnect constantly - Plex probes a channel
+    // before tuning it, and any seek or buffer stall drops and reopens the
+    // connection. Restarting the upstream each time makes the provider replay
+    // from the head of its buffer, which is what "keeps coming back 10 sec"
+    // describes, and on a one-connection line it also burns the only slot.
+    Logger.verbose(`No more subscribers, holding ${this.line.internalUrl} open for ${this.lingerMs}ms.`)
+    this.lingerTimer = setTimeout(() => {
+      this.lingerTimer = null
+      if (this.listeners === 0) this.end()
+    }, this.lingerMs)
   }
 
   subscribe () {
+    if (this.lingerTimer) {
+      clearTimeout(this.lingerTimer)
+      this.lingerTimer = null
+      Logger.verbose(`Reusing the still-open upstream for: ${this.line.internalUrl}`)
+    }
     Logger.verbose(`Subscribe to: ${this.line.internalUrl}`)
     this.listeners = this.listeners + 1
   }
@@ -211,3 +240,4 @@ class Worker extends EventEmitter {
 module.exports = Worker
 module.exports.RETRY_DELAY = RETRY_DELAY
 module.exports.MAX_CONSECUTIVE_FAILURES = MAX_CONSECUTIVE_FAILURES
+module.exports.LINGER_MS = LINGER_MS

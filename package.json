@@ -1,6 +1,6 @@
 {
   "name": "plexiptv",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Emulate Silicondust device for Plex by providing IPTV stream",
   "engines": {
     "node": ">=22.0.0"

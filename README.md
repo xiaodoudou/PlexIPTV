@@ -221,6 +221,16 @@ current work in progress:
  - online playlist merging
  - investigating why buffer is failing on some specific IPTV vendor
 
+1.2.1:
+ - fix: the upstream is now held open for a few seconds after the last viewer
+   leaves, so a reconnecting player rejoins the running stream instead of
+   restarting it. Restarting made the provider replay from the head of its
+   buffer, which showed up as the channel looping back ten seconds, and on a
+   one-connection line it also burned the only slot (#30)
+ - fix: scan progress was a fraction floored to an integer, so it read 0%
+   until the very last channel
+ - fix: discover.json reported the model name in the ModelNumber field
+
 1.2.0:
  - HLS (m3u8) streams are now supported: the playlist is followed and its
    segments are served to Plex as a continuous MPEG-TS stream (#8)
