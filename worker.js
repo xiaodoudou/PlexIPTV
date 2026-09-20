@@ -1,10 +1,11 @@
 const EventEmitter = require('events')
 const DataStream = require('./dataStream')
 const { streamRequest } = require('./httpClient')
-const { redactUrl } = require('./netGuard')
+const { isRtsp, redactUrl } = require('./netGuard')
 const { describeUpstreamStatus, isFatalUpstreamStatus } = require('./upstreamStatus')
 const { describePayload, detectPayload } = require('./payload')
 const { HlsReader } = require('./hls')
+const { Remuxer, isAvailable } = require('./remux')
 const Logger = new (require('./logger'))()
 
 // An upstream that ends or fails immediately used to be retried in a tight
@@ -36,6 +37,7 @@ class Worker extends EventEmitter {
     this.lingerTimer = null
     this.lingerMs = this.options.lingerMs != null ? this.options.lingerMs : LINGER_MS
     this.hls = null
+    this.rtsp = null
     this.finalUrl = null
     this.stream = new DataStream()
 
@@ -46,9 +48,22 @@ class Worker extends EventEmitter {
     this.requestFactory = this.requestFactory.bind(this)
     this.scheduleRetry = this.scheduleRetry.bind(this)
     this.startHls = this.startHls.bind(this)
+    this.startRtsp = this.startRtsp.bind(this)
 
     // Init
-    this.request = this.requestFactory()
+    // RTSP is not HTTP, so there is nothing to fetch: ffmpeg speaks it and
+    // hands back a transport stream. Deferred to the next tick, the same as the
+    // HTTP client does, so a caller can attach listeners before anything is
+    // emitted. Without that, a channel that fails immediately reports into the
+    // void.
+    this.request = null
+    if (isRtsp(this.url)) {
+      process.nextTick(() => {
+        if (!this.stream.isEnded) this.startRtsp()
+      })
+    } else {
+      this.request = this.requestFactory()
+    }
     this.once('end', () => {
       this.stream.end()
     })
@@ -67,6 +82,10 @@ class Worker extends EventEmitter {
       if (this.hls) {
         this.hls.stop()
         this.hls = null
+      }
+      if (this.rtsp) {
+        this.rtsp.stop()
+        this.rtsp = null
       }
       if (this.request) this.request.abort()
     })
@@ -123,7 +142,7 @@ class Worker extends EventEmitter {
       this.retryTimer = null
       if (this.stream.isEnded) return
       Logger.verbose(`Renew preloading: ${this.line.internalUrl}`)
-      this.request = this.requestFactory()
+      this.request = isRtsp(this.url) ? this.startRtsp() : this.requestFactory()
     }, this.retryDelay)
     if (this.retryTimer.unref) this.retryTimer.unref()
   }
@@ -147,7 +166,7 @@ class Worker extends EventEmitter {
     reader.on('error', (error) => {
       if (this.stream.isEnded) return
       this.failures = this.failures + 1
-      Logger.error(`HLS error on ${this.line.internalUrl}:`, error.message)
+      Logger.error(`Cannot play ${this.line.name}: ${error.message}`)
       this.hls = null
       reader.stop()
       this.scheduleRetry()
@@ -159,6 +178,56 @@ class Worker extends EventEmitter {
     })
 
     reader.start()
+  }
+
+  /**
+   * RTSP channels are played by handing the URL to ffmpeg, which repackages the
+   * stream as MPEG-TS with -c copy. Nothing is re-encoded.
+   *
+   * ffmpeg opens this connection itself, because this process does not speak
+   * RTSP. The URL has already been checked by the playlist parser, which
+   * refuses anything that is not RTSP or HTTP and refuses private addresses
+   * unless allowPrivateNetwork is set, and ffmpeg is restricted to RTSP
+   * related protocols so a hostile session description cannot redirect it.
+   */
+  startRtsp () {
+    if (this.stream.isEnded || this.rtsp) return null
+    if (!isAvailable()) {
+      const explanation = 'this is an RTSP stream, which needs ffmpeg to play. ' +
+        'Install ffmpeg and put it on PATH, or set PLEXIPTV_FFMPEG to its location.'
+      Logger.warn(`Cannot play ${this.line.name}: ${explanation}`)
+      this.emit('upstream-error', 501, explanation)
+      this.end()
+      return null
+    }
+
+    Logger.verbose(`Opening RTSP stream for ${this.line.internalUrl} (${redactUrl(this.url)})`)
+    const remuxer = new Remuxer()
+    this.rtsp = remuxer
+
+    remuxer.on('data', (chunk) => this.stream.write(chunk))
+    remuxer.on('error', (error) => {
+      if (this.stream.isEnded) return
+      this.failures = this.failures + 1
+      Logger.error(`Cannot play ${this.line.name}: ${error.message}`)
+      this.rtsp = null
+      remuxer.stop()
+      this.scheduleRetry()
+    })
+    remuxer.on('end', () => {
+      if (this.stream.isEnded) return
+      this.rtsp = null
+      this.failures = this.failures + 1
+      this.scheduleRetry()
+    })
+
+    if (!remuxer.start(this.url)) {
+      this.rtsp = null
+      this.emit('upstream-error', 501, 'ffmpeg could not be started, so this RTSP channel cannot play.')
+      this.end()
+      return null
+    }
+    return null
   }
 
   requestFactory () {
@@ -226,7 +295,7 @@ class Worker extends EventEmitter {
 
     myRequest.on('error', (error) => {
       this.failures = this.failures + 1
-      Logger.error(`Error occured on ${this.line.internalUrl}:`, error.message)
+      Logger.error(`Cannot play ${this.line.name}: ${error.message}`)
       this.scheduleRetry()
     })
 

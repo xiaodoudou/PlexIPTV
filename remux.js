@@ -17,6 +17,32 @@ const FFMPEG_ARGS = [
   'pipe:1'
 ]
 
+// What ffmpeg is allowed to speak when it opens a stream itself, which it only
+// does for RTSP. Without this an RTSP server could steer it somewhere else
+// through the session description; `file` is deliberately absent so a hostile
+// SDP cannot make it read from the disk.
+const RTSP_PROTOCOL_WHITELIST = 'rtsp,rtsps,rtp,udp,tcp,tls,crypto,data'
+// ffmpeg expects microseconds.
+const RTSP_TIMEOUT_US = 15000000
+
+function rtspArgs (url) {
+  return [
+    '-hide_banner',
+    '-loglevel', 'error',
+    '-protocol_whitelist', RTSP_PROTOCOL_WHITELIST,
+    // Give up rather than hanging on a source that accepts the socket and then
+    // says nothing. -timeout covers the RTSP socket, -rw_timeout the transport
+    // underneath it; a watchdog below covers whatever neither of them catches.
+    '-timeout', String(RTSP_TIMEOUT_US),
+    '-rw_timeout', String(RTSP_TIMEOUT_US),
+    '-fflags', '+genpts',
+    '-i', url,
+    '-c', 'copy',
+    '-f', 'mpegts',
+    'pipe:1'
+  ]
+}
+
 let cachedBinary
 let probed = false
 
@@ -69,20 +95,52 @@ class Remuxer extends EventEmitter {
     this.process = null
     this.closed = false
     this.startedAt = 0
+    this.sourceUrl = null
+    this.firstOutput = false
+    this.watchdog = null
   }
 
-  start () {
+  /**
+   * @param {string} [url] When given, ffmpeg opens this stream itself instead
+   *   of reading from stdin. Only used for RTSP, which this process does not
+   *   speak. The URL must already have been validated by the caller.
+   */
+  start (url) {
     const binary = findFfmpeg()
     if (!binary) return false
 
+    this.sourceUrl = url || null
+    const args = url ? rtspArgs(url) : FFMPEG_ARGS
     // spawn with an argument array and no shell: nothing here is parsed as a
-    // command line, so a hostile segment name cannot inject anything.
-    this.process = spawn(binary, FFMPEG_ARGS, { stdio: ['pipe', 'pipe', 'pipe'] })
+    // command line, so neither a hostile segment name nor a stream URL can
+    // inject anything.
+    this.process = spawn(binary, args, { stdio: ['pipe', 'pipe', 'pipe'] })
     this.startedAt = Date.now()
 
     this.process.stdout.on('data', (chunk) => {
-      if (!this.closed) this.emit('data', chunk)
+      if (this.closed) return
+      if (!this.firstOutput) {
+        this.firstOutput = true
+        this.clearWatchdog()
+      }
+      this.emit('data', chunk)
     })
+
+    // ffmpeg's own timeouts do not always fire: a source that accepts the
+    // socket and then says nothing can hold it open indefinitely, which would
+    // wedge the channel. Nothing out of ffmpeg within the grace period means
+    // it is not going to play.
+    if (url) {
+      this.watchdog = setTimeout(() => {
+        this.watchdog = null
+        if (this.closed || this.firstOutput) return
+        const seconds = Math.round(RTSP_TIMEOUT_US / 1000000)
+        this.closed = true
+        this.killProcess()
+        this.emit('error', new Error(`the stream produced nothing within ${seconds}s, so it is not playable`))
+      }, Math.round(RTSP_TIMEOUT_US / 1000))
+      if (this.watchdog.unref) this.watchdog.unref()
+    }
     this.process.stderr.on('data', (chunk) => {
       const message = chunk.toString().trim()
       if (message.length > 0) Logger.verbose(`ffmpeg: ${message.slice(0, 200)}`)
@@ -103,27 +161,42 @@ class Remuxer extends EventEmitter {
     return true
   }
 
+  clearWatchdog () {
+    if (!this.watchdog) return
+    clearTimeout(this.watchdog)
+    this.watchdog = null
+  }
+
+  killProcess () {
+    if (!this.process) return
+    const child = this.process
+    this.process = null
+    try {
+      child.stdin.end()
+    } catch (error) {
+      // already gone
+    }
+    child.kill('SIGKILL')
+  }
+
   write (chunk) {
     if (this.closed || !this.process || !this.process.stdin.writable) return false
     return this.process.stdin.write(chunk)
   }
 
   stop () {
+    this.clearWatchdog()
     if (this.closed) return
     this.closed = true
-    if (!this.process) return
-    try {
-      this.process.stdin.end()
-    } catch (error) {
-      // already gone
-    }
-    this.process.kill('SIGKILL')
-    this.process = null
+    this.killProcess()
   }
 }
 
 module.exports = {
   FFMPEG_ARGS,
+  RTSP_PROTOCOL_WHITELIST,
+  RTSP_TIMEOUT_US,
+  rtspArgs,
   Remuxer,
   findFfmpeg,
   isAvailable
