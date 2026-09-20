@@ -1,4 +1,4 @@
-const SSDP = require('node-ssdp').Server
+const { SsdpServer } = require('./ssdp')
 const Logger = new (require('./logger'))()
 
 /**
@@ -63,15 +63,12 @@ class DVR {
     this.express.all(this.lineStatusUrl, this.lineupStatus)
     this.express.all(this.discoverUrl, this.discover)
     this.express.all(this.deviceUrl, this.device)
-    this.ssdpServer = new SSDP({
-      location: {
-        port: this.express.serverPort,
-        path: '/device.xml'
-      },
+    this.ssdpServer = new SsdpServer({
+      port: this.express.serverPort,
+      path: '/device.xml',
       udn: `f10c2345-7329-40b7-8b04-27${this.serialNumber}`,
-      allowWildcards: true,
       adInterval: 5000,
-      ssdpSig: `${this.friendlyName}/${this.firmwareVersion} UPnP/1.0`
+      signature: `${this.friendlyName}/${this.firmwareVersion} UPnP/1.0`
     })
 
     this.ssdpServer.addUSN('upnp:rootdevice')
