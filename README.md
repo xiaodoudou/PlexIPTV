@@ -43,6 +43,10 @@ set DEBUG=* & PlexIPTV.win.x64.exe & set debug =
 
 ## Settings
 
+Your `settings.json` contains your provider URL, which for most providers
+embeds your username and password. It is written with `0600` permissions, and
+it is in `.gitignore` — keep it that way.
+
 ```javascript
 {
   "m3u8": {
@@ -50,8 +54,13 @@ set DEBUG=* & PlexIPTV.win.x64.exe & set debug =
     "remote": "https://domain.fqd/blablabla.m3u8" // Remote URL of the playlist
   },
   "serverPort": 1234, // Server port
+  "serverHost": "0.0.0.0", // Interface to bind. See the security note below
   "serverName": "PlexIPTV", // Name of the server
+  "publicUrl": "", // Optional. Pins the URL advertised to Plex, e.g. "http://192.168.1.10:1234".
+                   // When empty the client supplied Host header is used instead
+  "allowPrivateNetwork": false, // Allow streams on private/LAN addresses. See the security note below
   "tunerCount": 1, // How many simultaneous feed your IPTV provider support
+  "limit": -1, // Maximum number of channels to expose, -1 for no limit
   "removeIfNotFoundOnFilter": true, // Will remove channel from playlist that aren't present on the filter list
   "doNotPullRemotePlaylist": false, // Will not pul online playlist
   "filter": [ // Filter list
@@ -61,7 +70,7 @@ set DEBUG=* & PlexIPTV.win.x64.exe & set debug =
     },
     {
       "name": ">>> World News",
-      "remame": "World News", // Will rename the channel to "World News"
+      "rename": "World News", // Will rename the channel to "World News"
       "channel": "2"
     },
     {
@@ -77,8 +86,26 @@ set DEBUG=* & PlexIPTV.win.x64.exe & set debug =
 }
 ```
 
+## Security
+
+Two points matter when you deploy:
+
+**The server has no authentication.** It binds `0.0.0.0` by default so Plex can
+discover it on your LAN, which means anyone who can reach the port can list and
+stream every channel using your subscription. Keep it on a trusted network, or
+set `"serverHost"` to a specific interface. Do not port-forward it.
+
+**Streams pointing at private addresses are refused by default.** Only `http`
+and `https` URLs are fetched, and addresses in private, loopback, link-local
+and reserved ranges are rejected so a hostile or tampered playlist cannot turn
+the proxy into a probe against your internal network. If you genuinely stream
+from a LAN source, set `"allowPrivateNetwork": true`.
+
 ## Docker
 You can pull the image by doing `docker pull xiaodoudoufr/plexiptv`, then you can run it by `docker run -p 12345:1234 --volume [your config path]:/opt/PlexIPTV/config -d xiaodoudoufr/plexiptv`
+
+The images run as the unprivileged `node` user and install runtime dependencies
+only.
 
 ## TODO:
 - [x] Option to avoid pulling online playlist
@@ -87,8 +114,43 @@ You can pull the image by doing `docker pull xiaodoudoufr/plexiptv`, then you ca
 - [ ] Resolving nesting playlist
 
 ## How to build yourself the app?
-After have run `yarn`, if you are on windows you can use: `npm run build` which will trigger all builds (windows, macos, linux, docker).
-If you want build a specific target you can do for example `npm run build:win:x64`.
+Requires Node.js 22 or newer. After running `npm install`, `npm run build`
+produces standalone binaries in `build/`:
+
+| Target | Script |
+| --- | --- |
+| Windows x64 | `npm run build:win:x64` |
+| macOS x64 | `npm run build:macos:x64` |
+| Linux x64 | `npm run build:linux:x64` |
+| Linux arm64 | `npm run build:linux:arm64` |
+| macOS arm64 | `npm run build:macos:arm64` (not in `npm run build`, see below) |
+
+The binaries bundle Node 26 and are produced with
+[`@yao-pkg/pkg`](https://github.com/yao-pkg/pkg), the maintained fork of the
+archived `vercel/pkg`. The original `pkg` only supported up to Node 18, which
+is end of life, and carried an unpatched privilege-escalation advisory.
+
+Two cross-compilation caveats:
+
+- **arm64 targets are built without V8 bytecode** (`--no-bytecode --public`).
+  Generating bytecode requires *executing* the target binary, which an x64 host
+  cannot do for arm64. The source is therefore readable inside those binaries.
+- **macOS arm64 is excluded from `npm run build`.** Apple Silicon refuses to
+  launch an unsigned binary, and signing cannot be done from Windows or Linux
+  without `ldid`. Build it, then on a Mac run
+  `codesign --sign - PlexIPTV.macos.arm64`.
+
+Dependencies are locked with `package-lock.json`; the old `yarn.lock` was
+dropped so there is a single lockfile.
+
+## Tests
+```bash
+npm test
+```
+
+Runs the suite with the built-in Node test runner — no test framework
+dependency. `npm run lint` checks style, and `npm run audit:prod` audits the
+dependencies that actually ship.
 
 
 ## Changelogs
@@ -96,6 +158,18 @@ If you want build a specific target you can do for example `npm run build:win:x6
 current work in progress:
  - online playlist merging
  - investigating why buffer is failing on some specific IPTV vendor
+
+1.1.0:
+ - security: stop writing provider credentials to the log file, settings and playlist cache
+ - security: only fetch http/https URLs, and refuse private/loopback addresses by default
+ - security: escape all values interpolated into device.xml
+ - security: return 404 instead of faulting on an unknown channel id
+ - security: drop request, lodash, moment, filendir and valid-url; upgrade the rest
+ - security: Docker images run as a non-root user on Node 22 LTS
+ - requires Node.js 18 or newer
+ - adds a test suite (npm test)
+ - BREAKING: streams on private/LAN addresses are now refused unless you set
+   "allowPrivateNetwork": true in your settings
  
 1.0.4:  
  - fix settings / template merging

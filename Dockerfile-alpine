@@ -1,19 +1,22 @@
-FROM node:carbon-alpine
+# See Dockerfile: node:carbon-alpine was Node 8 and is long past end of life.
+FROM node:26-alpine
 
 WORKDIR /opt/PlexIPTV
 
-RUN mkdir -p ./config
-VOLUME ["/opt/PlexIPTV/config"]
-
 COPY package*.json ./
-COPY yarn.lock ./
 
-RUN yarn --production
+RUN npm ci --omit=dev && npm cache clean --force
 
 COPY . .
 
-RUN sed -i 's/iptv.m3u8/config\/iptv.m3u8/g' template.json
+RUN sed -i 's/iptv.m3u8/config\/iptv.m3u8/g' template.json \
+ && mkdir -p ./config ./logs \
+ && chown -R node:node /opt/PlexIPTV
 
-EXPOSE 1245
+VOLUME ["/opt/PlexIPTV/config"]
+
+USER node
+
+EXPOSE 1234
 
 CMD [ "npm", "run", "start:docker" ]
