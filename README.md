@@ -105,6 +105,14 @@ matches `TVA FR` without the brackets, which is why those filters appear to do
 nothing. An invalid pattern is reported in the log and skipped rather than
 taking the server down.
 
+A filter that matches no channels is reported at startup, with the escaped
+pattern to copy if that is what went wrong:
+
+```
+Filter #1 (name "Canal + 1 HD PL") matched no channels. Patterns are regular
+expressions, so if you meant that literally, write it as "Canal \+ 1 HD PL".
+```
+
 **A filter that matches several channels numbers them consecutively** from its
 `channel`. A filter of `"name": "^UK:"` with `"channel": "100"` gives the first
 match 100, the next 101, and so on. Plex keeps only one channel per number, so
@@ -232,6 +240,11 @@ dependencies that actually ship.
 current work in progress:
  - online playlist merging
  - investigating why buffer is failing on some specific IPTV vendor
+
+1.3.1:
+ - a filter that matches no channels now says so at startup, and offers the
+   escaped pattern when the cause is an unescaped regex character. Four
+   separate reports turned out to be this (#21, #22, #23, #27)
 
 1.3.0:
  - RTSP channels (rtsp:// and rtsps://) now play, through ffmpeg with -c copy

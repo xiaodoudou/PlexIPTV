@@ -31,6 +31,17 @@ function matchesPattern (value, pattern) {
   }
 }
 
+// Characters that mean something to a regular expression. A filter full of
+// them that matched nothing is almost always someone typing a channel name
+// literally, which is the single most common confusion in the tracker.
+const REGEX_METACHARACTERS = /[+*?()[\]{}|^$\\]/
+
+function escapeHint (pattern) {
+  if (typeof pattern !== 'string' || !REGEX_METACHARACTERS.test(pattern)) return ''
+  const escaped = pattern.replace(/[+*?()[\]{}|^$.\\]/g, '\\$&')
+  return ` Patterns are regular expressions, so if you meant that literally, write it as ${JSON.stringify(escaped)}.`
+}
+
 /**
  * Turns an m3u8 body into the channel list the DVR serves.
  * Pure and synchronous so it can be exercised without a network or a server.
@@ -111,6 +122,18 @@ function parsePlaylist (m3u8, settings) {
     channels.push({ channel: `${channel}`, name, url })
   }
 
+  // A filter that matches nothing is nearly always a mistake, and silently
+  // doing nothing is how it goes unnoticed for years.
+  for (let index = 0; index < filters.length; index++) {
+    const filter = filters[index]
+    if (!filter) continue
+    if (filterUsage.get(index)) continue
+    if (filter.name === undefined && filter.meta === undefined) continue
+    const pattern = filter.name !== undefined ? filter.name : filter.meta
+    const field = filter.name !== undefined ? 'name' : 'meta'
+    Logger.warn(`Filter #${index + 1} (${field} ${JSON.stringify(pattern)}) matched no channels.${escapeHint(pattern)}`)
+  }
+
   const ordered = channels.sort((a, b) => Number(a.channel) - Number(b.channel))
   if (Number(config.limit) > 0) {
     return ordered.slice(0, Number(config.limit))
@@ -120,6 +143,7 @@ function parsePlaylist (m3u8, settings) {
 
 module.exports = {
   DEFAULT_CHANNEL,
+  escapeHint,
   isStreamableUrl,
   parsePlaylist,
   redactUrl
