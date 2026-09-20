@@ -184,9 +184,11 @@ class Worker extends EventEmitter {
       }
       const explanation = describeUpstreamStatus(response.statusCode)
       Logger.warn(`Cannot play ${this.line.name}: ${explanation}`)
-      // A 4xx is the provider deliberately refusing us. Retrying cannot fix
-      // that, and hammering a provider that is already saying no is a good way
-      // to get the account flagged, so fail fast and report it upstream.
+      // A 4xx is the provider deliberately refusing us, and retrying cannot fix
+      // that. With 458 in particular, reconnecting into a line that is already
+      // at its connection limit can cost you the streams that are working:
+      // depending on the provider, the new attempt drops an existing session,
+      // or is itself dropped. So fail fast and report it upstream.
       if (isFatalUpstreamStatus(response.statusCode)) {
         this.upstreamStatus = response.statusCode
         myRequest.abort()
