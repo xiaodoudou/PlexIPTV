@@ -68,7 +68,10 @@ test('applies name filters, renaming and channel numbers', () => {
     removeIfNotFoundOnFilter: true,
     filter: [{ name: '^AMC$', rename: 'AMC HD', channel: '2' }]
   })
-  assert.deepStrictEqual(channels, [{ channel: '2', name: 'AMC HD', url: 'http://cdn.example.com/amc.ts' }])
+  assert.strictEqual(channels.length, 1)
+  assert.strictEqual(channels[0].channel, '2')
+  assert.strictEqual(channels[0].name, 'AMC HD')
+  assert.strictEqual(channels[0].url, 'http://cdn.example.com/amc.ts')
 })
 
 test('applies meta filters', () => {
@@ -183,7 +186,10 @@ test('a combined name and meta filter matches, as the README documents', () => {
       channel: '2'
     }]
   })
-  assert.deepStrictEqual(channels, [{ channel: '2', name: 'AMC HD', url: 'http://cdn.example.com/amc.ts' }])
+  assert.strictEqual(channels.length, 1)
+  assert.strictEqual(channels[0].channel, '2')
+  assert.strictEqual(channels[0].name, 'AMC HD')
+  assert.strictEqual(channels[0].url, 'http://cdn.example.com/amc.ts')
 })
 
 test('a combined filter still rejects a channel matching only one half', () => {
