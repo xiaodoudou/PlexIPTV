@@ -28,3 +28,6 @@ node_modules/
 settings.json
 build
 iptv.m3u8
+
+# never commit: local security notes
+SECURITY.md

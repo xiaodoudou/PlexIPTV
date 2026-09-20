@@ -1,6 +1,20 @@
-const _ = require('lodash')
 const SSDP = require('node-ssdp').Server
 const Logger = new (require('./logger'))()
+
+/**
+ * Escapes text before it is interpolated into the device description XML.
+ * Every field below originates from the settings file or from the client
+ * supplied Host header, so without this a value such as `</friendlyName>...`
+ * would let a caller rewrite the document Plex parses.
+ */
+function escapeXml (value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;')
+}
 
 class DVR {
   constructor (server) {
@@ -42,11 +56,13 @@ class DVR {
   }
 
   init () {
-    this.express.use(this.lineupUrl, this.lineup)
-    this.express.use(this.scanUrl, this.scan)
-    this.express.use(this.lineStatusUrl, this.lineupStatus)
-    this.express.use(this.discoverUrl, this.discover)
-    this.express.use(this.deviceUrl, this.device)
+    // `all` rather than `use`: `use` matches by prefix, so it also answered
+    // requests for paths such as /lineup.json/anything.
+    this.express.all(this.lineupUrl, this.lineup)
+    this.express.all(this.scanUrl, this.scan)
+    this.express.all(this.lineStatusUrl, this.lineupStatus)
+    this.express.all(this.discoverUrl, this.discover)
+    this.express.all(this.deviceUrl, this.device)
     this.ssdpServer = new SSDP({
       location: {
         port: this.express.serverPort,
@@ -66,43 +82,61 @@ class DVR {
     Logger.verbose('DVR is now initiated.')
   }
 
+  /**
+   * Builds the base URL advertised back to Plex. The Host header is client
+   * controlled, so it is only trusted when the settings pin a server name.
+   */
+  baseUrl (req) {
+    const configured = this.server.settings.publicUrl
+    if (typeof configured === 'string' && configured.length > 0) {
+      return configured.replace(/\/+$/, '')
+    }
+    return `${req.protocol}://${req.get('host')}`
+  }
+
   channels (req) {
-    const hostname = req.protocol + '://' + req.get('host')
+    const hostname = this.baseUrl(req)
     const lines = []
-    _.forEach(this.server.channels, (line) => {
+    for (const line of this.server.channels) {
       lines.push({
         GuideNumber: line.channel,
         GuideName: line.name,
-        URL: `${hostname}/channel/${line.channel}`
+        URL: `${hostname}/channel/${encodeURIComponent(line.channel)}`
       })
-    })
+    }
     Logger.verbose(`Return ${lines.length} channels.`)
     return lines
   }
 
   lineup (req, res, next) {
-    Logger.verbose(`Received a lineup request.`)
+    Logger.verbose('Received a lineup request.')
     res.json(this.channels(req))
   }
 
   scan (req, res, next) {
-    Logger.verbose(`Received a scan request.`)
+    Logger.verbose('Received a scan request.')
     process.nextTick(() => {
       res.json({})
     })
+    // Without this guard every unauthenticated request to /lineup.post queued
+    // another timer per channel, so repeated calls pile up timers unbounded.
+    if (this.scanInProgress) {
+      Logger.verbose('A scan is already running, ignoring the request.')
+      return
+    }
     this.scanPossible = 0
     this.scanInProgress = 1
     const delay = 10
     let progressDelay = delay
     let counter = 1
-    _.forEach(this.server.channels, (item) => {
+    for (const item of this.server.channels) { // eslint-disable-line no-unused-vars
       setTimeout(() => {
         this.scanFound = counter
         this.scanProgress = Math.floor(counter / this.server.channels.length)
         counter = counter + 1
       }, progressDelay)
       progressDelay = delay + progressDelay
-    })
+    }
     setTimeout(() => {
       this.scanPossible = 1
       this.scanInProgress = 0
@@ -128,13 +162,13 @@ class DVR {
   }
 
   lineupStatus (req, res, next) {
-    Logger.verbose(`Received a lineup status request.`)
+    Logger.verbose('Received a lineup status request.')
     res.json(this.status())
   }
 
   discover (req, res, next) {
-    Logger.verbose(`Received a discover request.`)
-    var baseUrl = req.protocol + '://' + req.get('host')
+    Logger.verbose('Received a discover request.')
+    const baseUrl = this.baseUrl(req)
     const status = {
       FriendlyName: this.friendlyName,
       Manufacturer: this.manufacturer,
@@ -150,29 +184,35 @@ class DVR {
     res.json(status)
   }
 
-  device (req, res, next) {
-    Logger.verbose(`Received a device identify request.`)
-    var baseUrl = req.protocol + '://' + req.get('host')
-    const xmlContent =
-      `<root xmlns="urn:schemas-upnp-org:device-1-0">
+  deviceXml (req) {
+    const baseUrl = this.baseUrl(req)
+    return `<root xmlns="urn:schemas-upnp-org:device-1-0">
         <specVersion>
-            <major>${this.version.major}</major>
-            <minor>${this.version.minor}</minor>
+            <major>${escapeXml(this.version.major)}</major>
+            <minor>${escapeXml(this.version.minor)}</minor>
         </specVersion>
-        <URLBase>${baseUrl}</URLBase>
+        <URLBase>${escapeXml(baseUrl)}</URLBase>
         <device>
           <deviceType>urn:schemas-upnp-org:device:MediaServer:1</deviceType>
-          <friendlyName>${this.friendlyName}</friendlyName>
-          <manufacturer>${this.manufacturer}</manufacturer>
-          <modelName>${this.modelName}</modelName>
-          <modelNumber>${this.modelNumber}</modelNumber>
-          <serialNumber>${this.serialNumber}</serialNumber>
-          <UDN>uuid:${this.deviceId}</UDN>
+          <friendlyName>${escapeXml(this.friendlyName)}</friendlyName>
+          <manufacturer>${escapeXml(this.manufacturer)}</manufacturer>
+          <modelName>${escapeXml(this.modelName)}</modelName>
+          <modelNumber>${escapeXml(this.modelNumber)}</modelNumber>
+          <serialNumber>${escapeXml(this.serialNumber)}</serialNumber>
+          <UDN>uuid:${escapeXml(this.deviceId)}</UDN>
         </device>
       </root>`
-    res.set('Content-Type', 'text/xml')
-    res.send(xmlContent)
+  }
+
+  device (req, res, next) {
+    Logger.verbose('Received a device identify request.')
+    // An explicit charset stops a browser from sniffing the response into
+    // something it will execute.
+    res.set('Content-Type', 'text/xml; charset=utf-8')
+    res.set('X-Content-Type-Options', 'nosniff')
+    res.send(this.deviceXml(req))
   }
 }
 
 module.exports = DVR
+module.exports.escapeXml = escapeXml

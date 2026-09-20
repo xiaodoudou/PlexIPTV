@@ -1,25 +1,17 @@
 {
+  "root": true,
   "extends": [
     "standard"
   ],
-  "plugins": [
-    "sort-class-members"
-  ],
-  "rules": {
-    "sort-class-members/sort-class-members": [
-      2,
-      {
-        "order": [
-          "[static-properties]",
-          "[static-methods]",
-          "[properties]",
-          "[conventional-private-properties]",
-          "constructor",
-          "[methods]",
-          "[conventional-private-methods]"
-        ],
-        "accessorPairPositioning": "getThenSet"
-      }
-    ]
-  }
+  "parserOptions": {
+    "ecmaVersion": 2022
+  },
+  "env": {
+    "node": true,
+    "es2022": true
+  },
+  "ignorePatterns": [
+    "node_modules/",
+    "build/"
+  ]
 }
