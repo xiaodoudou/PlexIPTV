@@ -27,6 +27,9 @@ class StreamRequest extends EventEmitter {
     this.allowPrivateNetwork = Boolean(this.options.allowPrivateNetwork)
     this.aborted = false
     this.request = null
+    // The URL the response actually came from, after any redirects. HLS
+    // segment paths resolve against this, not against the URL first asked for.
+    this.finalUrl = url
 
     // Deferred so a caller can attach listeners before anything is emitted.
     process.nextTick(() => {
@@ -77,7 +80,8 @@ class StreamRequest extends EventEmitter {
         return this.send(next, redirectsLeft - 1)
       }
 
-      this.emit('response', response)
+      this.finalUrl = url
+      this.emit('response', response, url)
       response.on('data', (chunk) => this.emit('data', chunk))
       response.on('end', () => { if (!this.aborted) this.emit('end') })
       response.on('error', (error) => this.fail(error))

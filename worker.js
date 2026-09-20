@@ -3,6 +3,8 @@ const DataStream = require('./dataStream')
 const { streamRequest } = require('./httpClient')
 const { redactUrl } = require('./netGuard')
 const { describeUpstreamStatus, isFatalUpstreamStatus } = require('./upstreamStatus')
+const { describePayload, detectPayload } = require('./payload')
+const { HlsReader } = require('./hls')
 const Logger = new (require('./logger'))()
 
 // An upstream that ends or fails immediately used to be retried in a tight
@@ -28,6 +30,8 @@ class Worker extends EventEmitter {
       ? this.options.maxConsecutiveFailures
       : MAX_CONSECUTIVE_FAILURES
     this.retryTimer = null
+    this.hls = null
+    this.finalUrl = null
     this.stream = new DataStream()
 
     // Bindings
@@ -36,6 +40,7 @@ class Worker extends EventEmitter {
     this.subscribe = this.subscribe.bind(this)
     this.requestFactory = this.requestFactory.bind(this)
     this.scheduleRetry = this.scheduleRetry.bind(this)
+    this.startHls = this.startHls.bind(this)
 
     // Init
     this.request = this.requestFactory()
@@ -49,6 +54,10 @@ class Worker extends EventEmitter {
       if (this.retryTimer) {
         clearTimeout(this.retryTimer)
         this.retryTimer = null
+      }
+      if (this.hls) {
+        this.hls.stop()
+        this.hls = null
       }
       if (this.request) this.request.abort()
     })
@@ -90,6 +99,39 @@ class Worker extends EventEmitter {
     if (this.retryTimer.unref) this.retryTimer.unref()
   }
 
+  /**
+   * Switches this worker from proxying bytes to following an HLS playlist,
+   * stitching its segments into the continuous stream Plex expects.
+   */
+  startHls (url) {
+    if (this.stream.isEnded || this.hls) return
+    const reader = new HlsReader(url, {
+      headers: { 'User-Agent': 'vlc 3.0.3' },
+      allowPrivateNetwork: Boolean(this.options.allowPrivateNetwork)
+    })
+    this.hls = reader
+    this.failures = 0
+
+    reader.on('data', (chunk) => {
+      this.stream.write(chunk)
+    })
+    reader.on('error', (error) => {
+      if (this.stream.isEnded) return
+      this.failures = this.failures + 1
+      Logger.error(`HLS error on ${this.line.internalUrl}:`, error.message)
+      this.hls = null
+      reader.stop()
+      this.scheduleRetry()
+    })
+    reader.on('end', () => {
+      if (this.stream.isEnded) return
+      this.hls = null
+      this.scheduleRetry()
+    })
+
+    reader.start()
+  }
+
   requestFactory () {
     // The upstream URL carries the subscriber's credentials, so only the
     // redacted form is ever written to the log file.
@@ -101,9 +143,14 @@ class Worker extends EventEmitter {
       allowPrivateNetwork: Boolean(this.options.allowPrivateNetwork)
     })
 
-    myRequest.on('response', (response) => {
+    let contentType = ''
+    let sniffed = false
+
+    myRequest.on('response', (response, finalUrl) => {
       if (response.statusCode === 200) {
         this.failures = 0
+        contentType = response.headers['content-type'] || ''
+        this.finalUrl = finalUrl || this.url
         return
       }
       const explanation = describeUpstreamStatus(response.statusCode)
@@ -120,6 +167,29 @@ class Worker extends EventEmitter {
     })
 
     myRequest.on('data', (buffer) => {
+      // A 200 does not mean the provider sent video. Sniff the first chunk so
+      // an HLS manifest can be resolved, and so an error page is reported
+      // instead of being forwarded to Plex as if it were a stream.
+      if (!sniffed) {
+        sniffed = true
+        const kind = detectPayload(contentType, buffer)
+
+        if (kind === 'hls') {
+          Logger.verbose(`${this.line.name} is an HLS playlist, following its segments.`)
+          myRequest.abort()
+          this.startHls(this.finalUrl || this.url)
+          return
+        }
+
+        if (kind === 'other') {
+          const explanation = describePayload(contentType, buffer)
+          Logger.warn(`Cannot play ${this.line.name}: ${explanation}`)
+          myRequest.abort()
+          this.emit('upstream-error', 200, explanation)
+          this.end()
+          return
+        }
+      }
       this.stream.write(buffer)
     })
 
