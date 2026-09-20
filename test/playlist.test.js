@@ -119,3 +119,112 @@ test('channels are ordered numerically, not lexicographically', () => {
   const numbers = channels.map((line) => Number(line.channel))
   assert.deepStrictEqual(numbers, numbers.slice().sort((a, b) => a - b))
 })
+
+// --- Regressions reported in the issue tracker ---
+
+const UK_SAMPLE = [
+  '#EXTM3U',
+  '#EXTINF:-1 group-title="UK",UK: BBC One',
+  'http://cdn.example.com/1.ts',
+  '#EXTINF:-1 group-title="UK",UK: BBC Two',
+  'http://cdn.example.com/2.ts',
+  '#EXTINF:-1 group-title="UK",UK: ITV',
+  'http://cdn.example.com/3.ts',
+  '#EXTINF:-1 group-title="US",US: CNN',
+  'http://cdn.example.com/4.ts'
+].join('\n')
+
+test('issue #21: a filter matching many channels numbers them consecutively', () => {
+  // Every match used to be given the identical number, and Plex keeps one
+  // channel per number, so the whole group collapsed to a single entry.
+  const channels = parsePlaylist(UK_SAMPLE, {
+    removeIfNotFoundOnFilter: true,
+    filter: [{ name: '^UK:', channel: '100' }]
+  })
+  assert.strictEqual(channels.length, 3)
+  assert.deepStrictEqual(channels.map((line) => line.channel), ['100', '101', '102'])
+  assert.deepStrictEqual(channels.map((line) => line.name), ['UK: BBC One', 'UK: BBC Two', 'UK: ITV'])
+})
+
+test('issue #21: a filter with no channel number auto-numbers instead of "undefined"', () => {
+  const channels = parsePlaylist(UK_SAMPLE, {
+    removeIfNotFoundOnFilter: true,
+    filter: [{ name: '^UK:' }]
+  })
+  assert.strictEqual(channels.length, 3)
+  for (const line of channels) {
+    assert.notStrictEqual(line.channel, 'undefined', 'the literal string "undefined" must never reach Plex')
+    assert.ok(Number.isFinite(Number(line.channel)), `${line.channel} should be numeric`)
+  }
+  assert.deepStrictEqual(channels.map((line) => line.channel), ['80000', '80001', '80002'])
+})
+
+test('two filters keep their own numbering runs', () => {
+  const channels = parsePlaylist(UK_SAMPLE, {
+    removeIfNotFoundOnFilter: true,
+    filter: [
+      { name: '^UK:', channel: '100' },
+      { name: '^US:', channel: '200' }
+    ]
+  })
+  assert.deepStrictEqual(channels.map((line) => line.channel), ['100', '101', '102', '200'])
+})
+
+test('a combined name and meta filter matches, as the README documents', () => {
+  // The old guard `if (!nameFilter || !metaFilter)` skipped the whole block
+  // when both were supplied, so combined filters never matched anything -
+  // including the example shipped in template.json.
+  const channels = parsePlaylist(SAMPLE, {
+    removeIfNotFoundOnFilter: true,
+    filter: [{
+      name: '^AMC$',
+      meta: 'I254\\.59337\\.schedulesdirect\\.org',
+      rename: 'AMC HD',
+      channel: '2'
+    }]
+  })
+  assert.deepStrictEqual(channels, [{ channel: '2', name: 'AMC HD', url: 'http://cdn.example.com/amc.ts' }])
+})
+
+test('a combined filter still rejects a channel matching only one half', () => {
+  const channels = parsePlaylist(SAMPLE, {
+    removeIfNotFoundOnFilter: true,
+    filter: [{ name: '^AMC$', meta: 'does-not-appear-anywhere', channel: '2' }]
+  })
+  assert.deepStrictEqual(channels, [], 'both halves must match')
+})
+
+test('the filter example shipped in template.json actually matches', () => {
+  const template = require('../template.json')
+  const channels = parsePlaylist(SAMPLE, Object.assign({}, template, { removeIfNotFoundOnFilter: true }))
+  const amc = channels.find((line) => line.name === 'AMC')
+  assert.ok(amc, 'the template filter should match the AMC entry')
+})
+
+test('issue #33: a group can be filtered through the meta pattern alone', () => {
+  const channels = parsePlaylist(UK_SAMPLE, {
+    removeIfNotFoundOnFilter: true,
+    filter: [{ meta: 'group-title="UK"', channel: '1' }]
+  })
+  assert.strictEqual(channels.length, 3, 'every channel in the group is kept')
+  assert.deepStrictEqual(channels.map((line) => line.channel), ['1', '2', '3'])
+})
+
+test('a filter setting neither name nor meta is ignored, not applied to everything', () => {
+  const channels = parsePlaylist(UK_SAMPLE, {
+    removeIfNotFoundOnFilter: false,
+    filter: [{ channel: '5' }]
+  })
+  assert.strictEqual(channels.length, 4)
+  assert.ok(!channels.every((line) => line.channel === '5'), 'it must not claim every channel')
+  assert.deepStrictEqual(channels.map((line) => line.channel), ['80000', '80001', '80002', '80003'])
+})
+
+test('rename applies to every channel a filter matches', () => {
+  const channels = parsePlaylist(UK_SAMPLE, {
+    removeIfNotFoundOnFilter: true,
+    filter: [{ name: '^UK:', rename: 'British', channel: '10' }]
+  })
+  assert.deepStrictEqual(channels.map((line) => line.name), ['British', 'British', 'British'])
+  assert.deepStrictEqual(channels.map((line) => line.channel), ['10', '11', '12'])
+})
