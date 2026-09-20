@@ -43,6 +43,37 @@ function escapeHint (pattern) {
 }
 
 /**
+ * Pulls the key="value" attributes out of an #EXTINF line: tvg-logo, tvg-id
+ * and friends. Providers vary on spacing, so `tvg-logo = "x"` parses too.
+ */
+function parseAttributes (meta) {
+  const attributes = {}
+  if (typeof meta !== 'string') return attributes
+  const rule = /([A-Za-z0-9_-]+)\s*=\s*"([^"]*)"/g
+  let found
+  while ((found = rule.exec(meta)) !== null) {
+    attributes[found[1].toLowerCase()] = found[2]
+  }
+  return attributes
+}
+
+/**
+ * A logo URL comes out of the playlist, which is not trusted, and is handed
+ * straight to Plex to load. Only plain http(s) links are passed on, so a
+ * playlist cannot smuggle a javascript: or data: URL into the guide.
+ */
+function usableLogo (url) {
+  if (typeof url !== 'string' || url.length === 0) return ''
+  try {
+    const parsed = new URL(url)
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return ''
+    return parsed.toString()
+  } catch (error) {
+    return ''
+  }
+}
+
+/**
  * Turns an m3u8 body into the channel list the DVR serves.
  * Pure and synchronous so it can be exercised without a network or a server.
  */
@@ -119,7 +150,16 @@ function parsePlaylist (m3u8, settings) {
       channel = defaultChannel
       defaultChannel++
     }
-    channels.push({ channel: `${channel}`, name, url })
+    const attributes = parseAttributes(meta)
+    channels.push({
+      channel: `${channel}`,
+      name,
+      url,
+      // Carried through for the guide. Absent attributes stay empty rather
+      // than undefined, so nothing downstream has to guard for it.
+      logo: usableLogo(attributes['tvg-logo']),
+      tvgId: attributes['tvg-id'] || ''
+    })
   }
 
   // A filter that matches nothing is nearly always a mistake, and silently
@@ -144,6 +184,8 @@ function parsePlaylist (m3u8, settings) {
 module.exports = {
   DEFAULT_CHANNEL,
   escapeHint,
+  parseAttributes,
+  usableLogo,
   isStreamableUrl,
   parsePlaylist,
   redactUrl

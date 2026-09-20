@@ -8,6 +8,7 @@
   "serverName": "PlexIPTV",
   "publicUrl": "",
   "allowPrivateNetwork": false,
+  "epgUrl": "",
   "tunerCount": 1,
   "deviceId": "001002003",
   "serialNumber": "0123456789",

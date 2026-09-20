@@ -1,4 +1,6 @@
 const { SsdpServer } = require('./ssdp')
+const { buildChannelElements, buildIdMap, guessEpgUrl, pipeProgrammes } = require('./xmltv')
+const NEWLINE = String.fromCharCode(10)
 const Logger = new (require('./logger'))()
 
 /**
@@ -44,6 +46,7 @@ class DVR {
     this.lineStatusUrl = '/lineup_status.json'
     this.discoverUrl = '/discover.json'
     this.deviceUrl = '/device.xml'
+    this.guideUrl = '/xmltv.xml'
 
     // Bindings
     this.init = this.init.bind(this)
@@ -53,6 +56,7 @@ class DVR {
     this.lineupStatus = this.lineupStatus.bind(this)
     this.discover = this.discover.bind(this)
     this.device = this.device.bind(this)
+    this.guide = this.guide.bind(this)
   }
 
   init () {
@@ -63,6 +67,7 @@ class DVR {
     this.express.all(this.lineStatusUrl, this.lineupStatus)
     this.express.all(this.discoverUrl, this.discover)
     this.express.all(this.deviceUrl, this.device)
+    this.express.all(this.guideUrl, this.guide)
     this.ssdpServer = new SsdpServer({
       port: this.express.serverPort,
       path: '/device.xml',
@@ -201,6 +206,51 @@ class DVR {
           <UDN>uuid:${escapeXml(this.deviceId)}</UDN>
         </device>
       </root>`
+  }
+
+  /**
+   * The XMLTV guide, which is the only route by which a channel logo can reach
+   * Plex: the HDHomeRun lineup format has no field for one.
+   *
+   * Entirely best effort. Channels and their logos go out immediately, and the
+   * provider's programme data is streamed in after them if there is any. No
+   * guide, a slow guide or a broken guide costs you programme listings and
+   * nothing else; the channels still work.
+   */
+  guide (req, res, next) {
+    Logger.verbose('Received a guide request.')
+    const settings = this.server.settings || {}
+    const configured = typeof settings.epgUrl === 'string' ? settings.epgUrl.trim() : ''
+    const epgUrl = configured.length > 0
+      ? configured
+      : guessEpgUrl(settings.m3u8 && settings.m3u8.remote)
+
+    res.set('Content-Type', 'application/xml; charset=utf-8')
+    res.set('X-Content-Type-Options', 'nosniff')
+    res.write('<?xml version="1.0" encoding="UTF-8" ?>\n')
+    res.write('<tv generator-info-name="PlexIPTV">\n')
+    res.write(buildChannelElements(this.server.channels))
+    res.write('\n')
+
+    const withLogos = this.server.channels.filter((line) => line.logo).length
+    Logger.verbose(`Guide: ${this.server.channels.length} channels, ${withLogos} with a logo.`)
+
+    if (epgUrl.length === 0) {
+      Logger.verbose('No guide URL is configured or derivable, serving channels only.')
+      res.end('</tv>' + NEWLINE)
+      return
+    }
+
+    let closed = false
+    req.on('close', () => { closed = true })
+
+    pipeProgrammes(epgUrl, buildIdMap(this.server.channels), {
+      allowPrivateNetwork: Boolean(settings.allowPrivateNetwork)
+    }, (text) => {
+      if (!closed && !res.writableEnded) res.write(text)
+    }).then(() => {
+      if (!closed && !res.writableEnded) res.end('</tv>' + NEWLINE)
+    })
   }
 
   device (req, res, next) {

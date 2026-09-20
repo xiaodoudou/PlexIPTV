@@ -61,6 +61,8 @@ it is in `.gitignore`, keep it that way.
   "publicUrl": "", // Optional. Pins the URL advertised to Plex, e.g. "http://192.168.1.10:1234".
                    // When empty the client supplied Host header is used instead
   "allowPrivateNetwork": false, // Allow streams on private/LAN addresses. See the security note below
+  "epgUrl": "", // Optional. XMLTV guide to merge into /xmltv.xml. Worked out from
+                // the playlist URL automatically for Xtream providers
   "tunerCount": 1, // How many simultaneous feed your IPTV provider support
   "limit": -1, // Maximum number of channels to expose, -1 for no limit
   "removeIfNotFoundOnFilter": true, // Will remove channel from playlist that aren't present on the filter list
@@ -168,6 +170,43 @@ channel open.
 Most ISP boxes serving RTSP are on your LAN, so those channels also need
 `"allowPrivateNetwork": true`.
 
+## Channel logos and the guide
+
+Channel logos cannot travel through the tuner. PlexIPTV presents itself to Plex
+as an HDHomeRun device, and that lineup format has three fields per channel:
+number, name and URL. There is nowhere to put an image.
+
+They travel through the **guide** instead, so PlexIPTV serves one:
+
+```
+http://your-server:1234/xmltv.xml
+```
+
+Add that as the XMLTV guide when you set up the DVR in Plex. It contains your
+channels, numbered and named exactly as the tuner presents them, with the
+`tvg-logo` from your playlist attached to each.
+
+If your provider publishes an XMLTV feed, programme data is merged in as well.
+For an Xtream provider the URL is worked out from your playlist URL
+automatically, by swapping `get.php` for `xmltv.php`. Set `epgUrl` in the
+settings to point somewhere else, or to use a guide from a provider that does
+not follow that convention.
+
+Only programmes for channels in your lineup are kept, and their channel ids are
+rewritten to your channel numbers. That matters for two reasons: pointing Plex
+straight at a provider guide stops working the moment you rename or renumber
+anything with filters, and a provider guide covering their whole catalogue runs
+to tens of megabytes where a filtered lineup needs well under a megabyte.
+
+**None of this is required.** No guide URL, an unreachable one, or a provider
+without an EPG all produce the same thing: the channel list with its logos,
+served immediately. You lose programme listings and nothing else.
+
+One thing worth knowing: logos served over plain `http` do not appear when you
+use Plex through `app.plex.tv`, because the browser refuses to load insecure
+images into a secure page. They show up in the local web app and in the native
+clients.
+
 ## Security
 
 Two points matter when you deploy:
@@ -240,6 +279,16 @@ dependencies that actually ship.
 current work in progress:
  - online playlist merging
  - investigating why buffer is failing on some specific IPTV vendor
+
+1.4.0:
+ - serves an XMLTV guide at /xmltv.xml carrying the tvg-logo from your
+   playlist, which is the only route by which a channel logo can reach Plex (#28)
+ - merges provider programme data into it when there is any, keeping only the
+   channels in your lineup and renumbering them to match
+ - the guide URL is derived from an Xtream playlist URL automatically, or set
+   "epgUrl" yourself
+ - no guide, a broken guide or a slow one costs you programme listings and
+   nothing else: the channels and their logos are served either way
 
 1.3.1:
  - a filter that matches no channels now says so at startup, and offers the
