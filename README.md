@@ -47,7 +47,7 @@ set DEBUG=* & PlexIPTV.win.x64.exe & set debug =
 
 Your `settings.json` contains your provider URL, which for most providers
 embeds your username and password. It is written with `0600` permissions, and
-it is in `.gitignore` — keep it that way.
+it is in `.gitignore`, keep it that way.
 
 ```javascript
 {
@@ -101,7 +101,7 @@ has to be doubled:
 | `Sky Sports F1` | `"name": "Sky Sports F1"` (nothing to escape) |
 
 Unescaped, `Canal+` means "Cana" followed by one or more `l`, and `TVA (FR)`
-matches `TVA FR` without the brackets — which is why those filters appear to do
+matches `TVA FR` without the brackets, which is why those filters appear to do
 nothing. An invalid pattern is reported in the log and skipped rather than
 taking the server down.
 
@@ -210,7 +210,7 @@ dropped so there is a single lockfile.
 npm test
 ```
 
-Runs the suite with the built-in Node test runner — no test framework
+Runs the suite with the built-in Node test runner, no test framework
 dependency. `npm run lint` checks style, and `npm run audit:prod` audits the
 dependencies that actually ship.
 
