@@ -1,5 +1,7 @@
 # PlexIPTV
-This app simulate a DVR device for Plex by providing a layer to any IPTV provider (that provide a m3u8 playlist).
+This app simulates a DVR device for Plex, so an IPTV subscription shows up as
+live TV. Point it at an m3u playlist or at an Xtream account and Plex sees an
+HDHomeRun tuner.
 
 I created that app for several reaons:
 - Other existing projects where too much complexe for my use (tvhProxy: https://github.com/jkaberg/tvhProxy)
@@ -8,19 +10,19 @@ I created that app for several reaons:
 
 ___
 
-Both raw MPEG-TS streams and HLS (m3u8) streams are supported. If your
-provider hands out an m3u8 playlist rather than a `.ts` stream, PlexIPTV
-follows it and stitches the segments into the continuous transport stream Plex
-expects. See [Streams and formats](#streams-and-formats).
+Raw MPEG-TS, HLS and RTSP streams all play. See
+[Streams and formats](#streams-and-formats) for what happens to each, and
+[Xtream accounts](#xtream-accounts) if your provider gave you a login rather
+than a playlist URL.
 
 ## What it does?
-It does:
-- pull remote m3u8 file to a local file
-- if remote file isn't accessible it will fallback to the local file
-- settings can help to filter play list and remap the channels
-- proxy the IPTV stream so only the server will be seen as the "user"
-- allow multiple concurent views into the same channel even if the provider block it
-- follow HLS (m3u8) streams and serve them to Plex as MPEG-TS
+- takes an m3u playlist URL or an Xtream username and password
+- caches the playlist locally and falls back to it when the provider is down
+- filters, renames and renumbers channels so Plex sees the lineup you want
+- proxies the stream, so the provider only ever sees one viewer: the server
+- lets several people watch the same channel on a line that allows one
+- plays HLS and RTSP as well as raw MPEG-TS, repackaging where needed
+- serves an XMLTV guide with your channel logos and programme listings
 
 ## Downloads
 You can download the last version on the [release page](https://github.com/xiaodoudou/PlexIPTV/releases)
@@ -32,7 +34,7 @@ Please provide me the full logs of what is happenning by doing on:
 
 - Linux
 ```bash
-DEBUG=* ./PlexIPTV.linux.x64
+DEBUG=* ./PlexIPTV.linux-x64
 ```
 - MacOS
 ```bash
@@ -274,8 +276,11 @@ only.
 ## TODO:
 - [x] Option to avoid pulling online playlist
 - [x] Docker container
-- [ ] Merge multiples online playlist
 - [x] Resolving nesting playlist (HLS)
+- [x] Xtream account support
+- [x] RTSP channels
+- [x] Channel logos and an XMLTV guide
+- [ ] Merge multiples online playlist
 
 ## How to build yourself the app?
 Requires Node.js 22 or newer. After running `npm install`, `npm run build`
