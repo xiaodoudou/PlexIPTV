@@ -1,5 +1,6 @@
 const { SsdpServer } = require('./ssdp')
 const { buildChannelElements, buildIdMap, guessEpgUrl, pipeProgrammes } = require('./xmltv')
+const Xtream = require('./xtream')
 const NEWLINE = String.fromCharCode(10)
 const Logger = new (require('./logger'))()
 
@@ -221,9 +222,15 @@ class DVR {
     Logger.verbose('Received a guide request.')
     const settings = this.server.settings || {}
     const configured = typeof settings.epgUrl === 'string' ? settings.epgUrl.trim() : ''
-    const epgUrl = configured.length > 0
-      ? configured
-      : guessEpgUrl(settings.m3u8 && settings.m3u8.remote)
+    let epgUrl = configured
+    if (epgUrl.length === 0 && Xtream.isConfigured(settings)) {
+      // The account already says where its guide lives, so there is nothing to
+      // infer from a playlist URL.
+      epgUrl = Xtream.epgUrl(settings.xtream)
+    }
+    if (epgUrl.length === 0) {
+      epgUrl = guessEpgUrl(settings.m3u8 && settings.m3u8.remote)
+    }
 
     res.set('Content-Type', 'application/xml; charset=utf-8')
     res.set('X-Content-Type-Options', 'nosniff')

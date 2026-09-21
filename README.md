@@ -43,6 +43,43 @@ DEBUG=* ./PlexIPTV.macos.x64
 set DEBUG=* & PlexIPTV.win.x64.exe & set debug =
 ```
 
+## Xtream accounts
+
+If your provider gives you a username, a password and a server address, you can
+use those directly instead of a playlist URL:
+
+```javascript
+{
+  "xtream": {
+    "url": "http://line.your-provider.tv",
+    "username": "your-username",
+    "password": "your-password",
+    "output": "ts"          // "ts" for a raw transport stream, "m3u8" for HLS
+  }
+}
+```
+
+That is all that is needed. The channel list, the logos, the guide ids and the
+group names all come from the provider's API, and the guide URL is the one that
+belongs to the account rather than something inferred.
+
+It also checks the account before doing anything else and tells you what the
+provider said, so an expired or suspended line reports itself instead of
+turning up as an empty channel list:
+
+```
+Xtream account is Active, using 0/1 connections.
+Xtream catalogue: 55406 live streams.
+```
+
+Filters, renaming, channel numbers and the limit all behave exactly as they do
+for a playlist, because the catalogue is turned into one internally. `m3u8.local`
+is still used, as the cache to fall back on if the provider is unreachable on a
+later start.
+
+Set `m3u8.remote` instead if you have a playlist URL. If both are present, the
+Xtream account wins.
+
 ## Settings
 
 Your `settings.json` contains your provider URL, which for most providers
@@ -51,8 +88,14 @@ it is in `.gitignore`, keep it that way.
 
 ```javascript
 {
+  "xtream": {          // Optional. Use these instead of m3u8.remote if you have them
+    "url": "",         // e.g. "http://line.your-provider.tv"
+    "username": "",
+    "password": "",
+    "output": "ts"     // "ts" or "m3u8"
+  },
   "m3u8": {
-    "local": "iptv.m3u8", // Locale file
+    "local": "iptv.m3u8", // Locale file, also the cache for an Xtream account
     "remote": "https://domain.fqd/blablabla.m3u8" // Remote URL of the playlist
   },
   "serverPort": 1234, // Server port
@@ -279,6 +322,17 @@ dependencies that actually ship.
 current work in progress:
  - online playlist merging
  - investigating why buffer is failing on some specific IPTV vendor
+
+1.5.0:
+ - an Xtream account can be configured with its url, username and password
+   instead of a playlist URL. Channels, logos, guide ids and group names all
+   come from the provider API, and the guide URL belongs to the account rather
+   than being inferred
+ - the account is checked at startup, so an expired or suspended line says so
+   instead of appearing as an empty channel list
+ - the provider's connection count is reported at startup
+ - a channel name containing a line break can no longer inject an extra entry
+   into the generated playlist
 
 1.4.0:
  - serves an XMLTV guide at /xmltv.xml carrying the tvg-logo from your
