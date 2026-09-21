@@ -14,6 +14,7 @@ const Config = require('./config')
 const { fetchText } = require('./httpClient')
 const { extractCredentials, redactUrl } = require('./netGuard')
 const { parsePlaylist } = require('./playlist')
+const Xtream = require('./xtream')
 const LoggerClass = require('./logger')
 const Logger = new LoggerClass()
 const packageJson = require('./package.json')
@@ -51,6 +52,7 @@ class Server {
 
     // Bindings
     this.pullPlaylist = this.pullPlaylist.bind(this)
+    this.pullXtream = this.pullXtream.bind(this)
     this.readPlaylist = this.readPlaylist.bind(this)
     this.proxy = this.proxy.bind(this)
   }
@@ -63,9 +65,15 @@ class Server {
       for (const secret of extractCredentials(settings.m3u8 && settings.m3u8.remote)) {
         LoggerClass.addSecret(secret)
       }
+      for (const secret of Xtream.secrets(settings.xtream)) {
+        LoggerClass.addSecret(secret)
+      }
       this.express.serverHost = settings.serverHost
       this.express.serverPort = settings.serverPort
       let getPlaylist = this.pullPlaylist
+      if (Xtream.isConfigured(settings)) {
+        getPlaylist = this.pullXtream
+      }
       if (this.settings.doNotPullRemotePlaylist) {
         getPlaylist = this.readPlaylist
       }
@@ -115,6 +123,50 @@ class Server {
       }
     })
     return deferred.promise
+  }
+
+  /**
+   * Builds the channel list from an Xtream account rather than a playlist URL.
+   * The catalogue is turned into a playlist so filters, renaming, the limit and
+   * the URL checks all behave exactly as they do for a normal m3u.
+   */
+  pullXtream () {
+    const deferred = Q.defer()
+    Logger.info(`Reading the Xtream catalogue from: ${Xtream.baseUrl(this.settings.xtream)}`)
+    Xtream.buildPlaylist(this.settings.xtream, {
+      allowPrivateNetwork: Boolean(this.settings.allowPrivateNetwork)
+    }).then((m3u8) => {
+      this.savePlaylist(m3u8, deferred)
+    }).catch((error) => {
+      Logger.error(`Could not read the Xtream account: ${error.message}`)
+      // A cached playlist from a previous run is better than no television.
+      this.readPlaylist().then((cached) => {
+        Logger.warn('Falling back to the last playlist saved to disk.')
+        deferred.resolve(cached)
+      }).catch(() => deferred.reject(error))
+    })
+    return deferred.promise
+  }
+
+  /**
+   * Writes the playlist beside the settings so a later run can fall back to it.
+   * It mirrors the provider's catalogue, credentials and all, so it is written
+   * owner-only.
+   */
+  savePlaylist (body, deferred) {
+    fs.writeFile(this.settings.m3u8.local, body, { encoding: 'utf8', mode: PLAYLIST_FILE_MODE }, (error) => {
+      if (error) {
+        deferred.reject(error)
+        return
+      }
+      try {
+        fs.chmodSync(this.settings.m3u8.local, PLAYLIST_FILE_MODE)
+      } catch (chmodError) {
+        Logger.warn(`Could not restrict permissions on ${this.settings.m3u8.local}: ${chmodError.message}`)
+      }
+      Logger.info(`Successfully saved playlist to: ${this.settings.m3u8.local}`)
+      deferred.resolve(body)
+    })
   }
 
   pullPlaylist () {

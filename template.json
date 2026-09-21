@@ -1,4 +1,10 @@
 {
+  "xtream": {
+    "url": "",
+    "username": "",
+    "password": "",
+    "output": "ts"
+  },
   "m3u8": {
     "local": "iptv.m3u8",
     "remote": "https://raw.githubusercontent.com/notanewbie/My-Legalstream/master/notanewbie-legalstream.m3u8"
