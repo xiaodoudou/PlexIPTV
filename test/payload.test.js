@@ -2,7 +2,7 @@ require('./helpers').isolate()
 
 const test = require('node:test')
 const assert = require('node:assert')
-const { describePayload, detectPayload, looksLikeTransportStream } = require('../payload')
+const { describePayload, detectPayload, looksLikeTransportStream } = require('../src/stream/payload')
 
 function tsChunk (length) {
   const chunk = Buffer.alloc(length || 400, 0x11)

@@ -2,7 +2,7 @@ require('./helpers').isolate()
 
 const test = require('node:test')
 const assert = require('node:assert')
-const { describeUpstreamStatus, isFatalUpstreamStatus } = require('../upstreamStatus')
+const { describeUpstreamStatus, isFatalUpstreamStatus } = require('../src/stream/upstreamStatus')
 
 test('458 is explained as the Xtream connection limit, not "Unknown Error"', () => {
   const message = describeUpstreamStatus(458)

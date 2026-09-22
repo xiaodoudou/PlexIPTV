@@ -2,8 +2,8 @@ require('./helpers').isolate()
 
 const test = require('node:test')
 const assert = require('node:assert')
-const DVR = require('../dvr')
-const { escapeXml } = require('../dvr')
+const DVR = require('../src/device/dvr')
+const { escapeXml } = require('../src/device/dvr')
 
 function makeDvr (settings, channels) {
   const server = {

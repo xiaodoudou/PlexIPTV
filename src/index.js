@@ -8,16 +8,16 @@ args
 const express = require('express')
 const Q = require('q')
 const fs = require('fs')
-const Preloader = require('./preloader')
-const DVR = require('./dvr')
+const Preloader = require('./stream/preloader')
+const DVR = require('./device/dvr')
 const Config = require('./config')
-const { fetchText } = require('./httpClient')
-const { extractCredentials, redactUrl } = require('./netGuard')
-const { parsePlaylist } = require('./playlist')
-const Xtream = require('./xtream')
+const { fetchText } = require('./net/httpClient')
+const { extractCredentials, redactUrl } = require('./net/netGuard')
+const { parsePlaylist } = require('./sources/playlist')
+const Xtream = require('./sources/xtream')
 const LoggerClass = require('./logger')
 const Logger = new LoggerClass()
-const packageJson = require('./package.json')
+const packageJson = require('../package.json')
 // Guarded for the same reason as in logger.js: args.parse throws when it
 // cannot derive a program name, and the defaults below already cover it.
 let flags = {}

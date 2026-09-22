@@ -3,7 +3,7 @@ require('./helpers').isolate()
 const test = require('node:test')
 const assert = require('node:assert')
 const { spawnSync } = require('node:child_process')
-const { FFMPEG_ARGS, Remuxer, isAvailable } = require('../remux')
+const { FFMPEG_ARGS, Remuxer, isAvailable } = require('../src/stream/remux')
 
 const HAVE_FFMPEG = isAvailable()
 const skip = HAVE_FFMPEG ? false : 'ffmpeg is not installed on this machine'
@@ -23,14 +23,14 @@ test('the ffmpeg invocation copies streams rather than re-encoding them', () => 
 test('ffmpeg is looked up without a shell', () => {
   // spawn/spawnSync with an argument array means nothing is parsed as a
   // command line, so a hostile segment name cannot inject anything.
-  const source = require('node:fs').readFileSync(require.resolve('../remux.js'), 'utf8')
+  const source = require('node:fs').readFileSync(require.resolve('../src/stream/remux.js'), 'utf8')
   assert.ok(!source.includes('shell: true'), 'no shell')
   assert.ok(!source.includes('exec('), 'no exec()')
 })
 
 test('an explicit opt out disables remuxing', () => {
   // Checked in a child process, because availability is probed once and cached.
-  const probe = spawnSync(process.execPath, ['-e', 'process.exit(require("./remux").isAvailable() ? 1 : 0)'], {
+  const probe = spawnSync(process.execPath, ['-e', 'process.exit(require("./src/stream/remux").isAvailable() ? 1 : 0)'], {
     cwd: require('node:path').join(__dirname, '..'),
     env: Object.assign({}, process.env, { PLEXIPTV_FFMPEG: 'none', PLEXIPTV_LOGDIR: process.env.PLEXIPTV_LOGDIR }),
     timeout: 20000
@@ -39,7 +39,7 @@ test('an explicit opt out disables remuxing', () => {
 })
 
 test('a missing ffmpeg binary is reported, not crashed on', () => {
-  const probe = spawnSync(process.execPath, ['-e', 'process.exit(require("./remux").isAvailable() ? 1 : 0)'], {
+  const probe = spawnSync(process.execPath, ['-e', 'process.exit(require("./src/stream/remux").isAvailable() ? 1 : 0)'], {
     cwd: require('node:path').join(__dirname, '..'),
     env: Object.assign({}, process.env, {
       PLEXIPTV_FFMPEG: 'definitely-not-a-real-binary-xyz',

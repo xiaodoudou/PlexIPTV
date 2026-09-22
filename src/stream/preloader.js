@@ -1,7 +1,7 @@
 const EventEmitter = require('events')
 const Worker = require('./worker')
 const md5 = require('md5')
-const Logger = new (require('./logger'))()
+const Logger = new (require('../logger'))()
 
 class Preloader extends EventEmitter {
   constructor () {

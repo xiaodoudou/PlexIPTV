@@ -1,9 +1,9 @@
 const EventEmitter = require('events')
-const { fetchText, streamRequest } = require('./httpClient')
-const { redactUrl } = require('./netGuard')
+const { fetchText, streamRequest } = require('../net/httpClient')
+const { redactUrl } = require('../net/netGuard')
 const { looksLikeTransportStream } = require('./payload')
 const { Remuxer, isAvailable } = require('./remux')
-const Logger = new (require('./logger'))()
+const Logger = new (require('../logger'))()
 
 // A live playlist is re-read on this fraction of its target duration, so new
 // segments are picked up before the player runs dry.

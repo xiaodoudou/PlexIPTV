@@ -3,8 +3,8 @@ require('./helpers').isolate()
 const test = require('node:test')
 const assert = require('node:assert')
 const NEWLINE = String.fromCharCode(10)
-const { buildChannelElements, buildIdMap, extractProgrammes, guessEpgUrl, remapProgramme } = require('../xmltv')
-const { parseAttributes, parsePlaylist, usableLogo } = require('../playlist')
+const { buildChannelElements, buildIdMap, extractProgrammes, guessEpgUrl, remapProgramme } = require('../src/sources/xmltv')
+const { parseAttributes, parsePlaylist, usableLogo } = require('../src/sources/playlist')
 
 test('tvg attributes are read, including the spaced form providers use', () => {
   const spaced = parseAttributes(' -1 tvg-id = "Hbo" tvg-name = "HBO" tvg-logo = "https://i.imgur.com/x.png"')

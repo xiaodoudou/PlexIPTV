@@ -1,6 +1,6 @@
 const dgram = require('dgram')
 const os = require('os')
-const Logger = new (require('./logger'))()
+const Logger = new (require('../logger'))()
 
 // SSDP discovery, as much of it as an HDHomeRun emulator needs.
 //

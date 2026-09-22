@@ -2,7 +2,7 @@ require('./helpers').isolate()
 
 const test = require('node:test')
 const assert = require('node:assert')
-const DataStream = require('../dataStream')
+const DataStream = require('../src/stream/dataStream')
 
 test('written chunks are emitted on the next tick', async () => {
   const stream = new DataStream()

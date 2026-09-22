@@ -2,7 +2,7 @@ require('./helpers').isolate()
 
 const test = require('node:test')
 const assert = require('node:assert')
-const { assertSafeUrl, extractCredentials, guardedLookup, isPrivateAddress, redactUrl } = require('../netGuard')
+const { assertSafeUrl, extractCredentials, guardedLookup, isPrivateAddress, redactUrl, redactUrlsInText } = require('../src/net/netGuard')
 
 test('assertSafeUrl accepts ordinary public http and https URLs', () => {
   assert.strictEqual(assertSafeUrl('http://example.com/a.m3u8').protocol, 'http:')
@@ -151,4 +151,38 @@ test('extractCredentials finds credentials in every provider URL shape', () => {
 test('extractCredentials ignores values too short to scrub safely', () => {
   // Scrubbing a 2-character value would mangle unrelated log lines.
   assert.deepStrictEqual(extractCredentials('http://line.example.org/get.php?username=ab&password=cd'), [])
+})
+
+test('redactUrlsInText strips credentials from a URL quoted inside a message', () => {
+  // The exact shape ffmpeg writes to stderr, which remux.js forwards to the log.
+  assert.strictEqual(
+    redactUrlsInText('Error opening input file rtsp://testuser0000:testpass0000@cdn.example.com/live.'),
+    'Error opening input file rtsp://***:***@cdn.example.com/live.'
+  )
+})
+
+test('redactUrlsInText covers Xtream credentials carried in the path', () => {
+  assert.strictEqual(
+    redactUrlsInText('Opening http://line.example.org/subuser123/subpass456/4242.ts for reading'),
+    'Opening http://line.example.org/***/***/4242.ts for reading'
+  )
+})
+
+test('redactUrlsInText redacts every URL in the line, not just the first', () => {
+  assert.strictEqual(
+    redactUrlsInText('rtsp://u1234:p5678@a/live and http://b/c?token=sixteencharacters'),
+    'rtsp://***:***@a/live and http://b/c?<redacted>'
+  )
+})
+
+test('redactUrlsInText leaves a message with no URL alone', () => {
+  // A bare hostname is not a credential, and mangling ordinary diagnostics
+  // would make the log harder to read for no gain.
+  const message = '[tcp @ 0x1] Failed to resolve hostname cdn.example.com: no such host'
+  assert.strictEqual(redactUrlsInText(message), message)
+})
+
+test('redactUrlsInText does not throw on a non string', () => {
+  assert.strictEqual(redactUrlsInText(undefined), 'undefined')
+  assert.strictEqual(redactUrlsInText(null), 'null')
 })

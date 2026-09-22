@@ -5,7 +5,7 @@ const test = require('node:test')
 const assert = require('node:assert')
 const fs = require('node:fs')
 const path = require('node:path')
-const Config = require('../config')
+const Config = require('../src/config')
 
 const WINDOWS = process.platform === 'win32'
 

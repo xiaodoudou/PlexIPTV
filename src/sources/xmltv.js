@@ -1,6 +1,6 @@
-const { streamRequest } = require('./httpClient')
-const { redactUrl } = require('./netGuard')
-const Logger = new (require('./logger'))()
+const { streamRequest } = require('../net/httpClient')
+const { redactUrl } = require('../net/netGuard')
+const Logger = new (require('../logger'))()
 
 // The guide is a convenience, never a precondition for watching television.
 // Everything here is best effort: if the provider has no EPG, or it is slow,
