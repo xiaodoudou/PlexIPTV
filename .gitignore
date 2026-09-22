@@ -29,5 +29,6 @@ settings.json
 build
 iptv.m3u8
 
-# never commit: local security notes
-SECURITY.md
+# never commit: local security notes. Anchored to the root, or it also
+# matches docs/security.md, which is documentation and belongs in the repo.
+/SECURITY.md
