@@ -29,6 +29,9 @@ class Worker extends EventEmitter {
     this.listeners = 0
     this.failures = 0
     this.upstreamStatus = null
+    // Why the last attempt failed, so that giving up can say so rather than
+    // closing the stream silently.
+    this.lastFailure = null
     this.retryDelay = this.options.retryDelay != null ? this.options.retryDelay : RETRY_DELAY
     this.maxConsecutiveFailures = this.options.maxConsecutiveFailures != null
       ? this.options.maxConsecutiveFailures
@@ -135,6 +138,11 @@ class Worker extends EventEmitter {
     if (this.stream.isEnded) return
     if (this.failures >= this.maxConsecutiveFailures) {
       Logger.error(`Giving up on ${this.line.internalUrl} after ${this.failures} consecutive failures.`)
+      // Ending here without a word meant a viewer who arrived before the first
+      // byte simply held an open socket until it timed out. The RTSP path
+      // already reports itself this way; the HLS path did not.
+      this.emit('upstream-error', this.upstreamStatus || 502,
+        this.lastFailure || 'the channel could not be played after several attempts.')
       this.end()
       return
     }
@@ -166,9 +174,16 @@ class Worker extends EventEmitter {
     reader.on('error', (error) => {
       if (this.stream.isEnded) return
       this.failures = this.failures + 1
+      this.lastFailure = error.message
       Logger.error(`Cannot play ${this.line.name}: ${error.message}`)
       this.hls = null
       reader.stop()
+      if (error.fatal) {
+        // Nothing to wait for, so say so now rather than after five rounds.
+        this.emit('upstream-error', this.upstreamStatus || 502, error.message)
+        this.end()
+        return
+      }
       this.scheduleRetry()
     })
     reader.on('end', () => {

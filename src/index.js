@@ -15,6 +15,8 @@ const { fetchText } = require('./net/httpClient')
 const { extractCredentials, redactUrl } = require('./net/netGuard')
 const { parsePlaylist } = require('./sources/playlist')
 const Xtream = require('./sources/xtream')
+const { sendSlate } = require('./stream/slate')
+const { mount: mountDashboard } = require('./dashboard')
 const LoggerClass = require('./logger')
 const Logger = new LoggerClass()
 const packageJson = require('../package.json')
@@ -83,6 +85,7 @@ class Server {
           const myDvr = new DVR(this)
           myDvr.init()
           this.express.get('/channel/:channelId', this.proxy)
+          mountDashboard(this, flags, this.express)
           const httpServer = this.express.listen(this.express.serverPort, this.express.serverHost, () => {
             Logger.info(`Server (v${packageJson.version}) is started at: http://${this.express.serverHost}:${this.express.serverPort}`)
             Logger.info(`Logs output: ${flags.logdir}`)
@@ -239,6 +242,10 @@ class Server {
     const onUpstreamError = (status, explanation) => {
       if (wroteAnything || res.headersSent) return
       release()
+      // Shown as video where possible. A 502 makes Plex draw its own generic
+      // failure, which tells the viewer nothing; a slate puts the actual
+      // reason, such as the line already being in use, on the screen.
+      if (sendSlate(res, 'Oops an error occured!', `Error: ${explanation}`)) return
       res.status(502).type('text/plain').send(`Cannot play ${line.name}: ${explanation}\n`)
     }
 

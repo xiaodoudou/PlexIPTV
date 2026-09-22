@@ -16,6 +16,12 @@
   "allowPrivateNetwork": false,
   "epgUrl": "",
   "tunerCount": 1,
+  "dashboard": {
+    "enabled": true,
+    "password": "",
+    "sessionSecret": "",
+    "refreshSeconds": 10
+  },
   "deviceId": "001002003",
   "serialNumber": "0123456789",
   "removeIfNotFoundOnFilter": true,
