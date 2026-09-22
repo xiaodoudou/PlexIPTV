@@ -4,16 +4,9 @@
 
 > An IPTV subscription as live TV in Plex, by pretending to be an HDHomeRun tuner
 
-[![Build](https://img.shields.io/github/actions/workflow/status/xiaodoudou/PlexIPTV/ci.yml?branch=master&style=flat-square&label=build)](https://github.com/xiaodoudou/PlexIPTV/actions/workflows/ci.yml)
-[![GitHub Release](https://img.shields.io/github/v/release/xiaodoudou/PlexIPTV?style=flat-square&color=e94560)](https://github.com/xiaodoudou/PlexIPTV/releases/latest)
-[![License](https://img.shields.io/badge/License-Apache--2.0-blue?style=flat-square)](https://github.com/xiaodoudou/PlexIPTV/blob/master/LICENSE)
-[![Stars](https://img.shields.io/github/stars/xiaodoudou/PlexIPTV?style=flat-square&color=yellow)](https://github.com/xiaodoudou/PlexIPTV/stargazers)
-[![Node](https://img.shields.io/badge/Node-%3E%3D22-339933?style=flat-square)](#supported-systems)
-[![Docker](https://img.shields.io/badge/Docker-image-2496ed?style=flat-square)](docs/docker.md)
-[![Streams](https://img.shields.io/badge/Streams-MPEG--TS%20%7C%20HLS%20%7C%20RTSP-blueviolet?style=flat-square)](docs/streams.md)
+[![Build](https://img.shields.io/github/actions/workflow/status/xiaodoudou/PlexIPTV/ci.yml?branch=master&style=flat-square&label=build)](https://github.com/xiaodoudou/PlexIPTV/actions/workflows/ci.yml) [![GitHub Release](https://img.shields.io/github/v/release/xiaodoudou/PlexIPTV?style=flat-square&color=e94560)](https://github.com/xiaodoudou/PlexIPTV/releases/latest) [![License](https://img.shields.io/badge/License-Apache--2.0-blue?style=flat-square)](https://github.com/xiaodoudou/PlexIPTV/blob/master/LICENSE) [![Stars](https://img.shields.io/github/stars/xiaodoudou/PlexIPTV?style=flat-square&color=yellow)](https://github.com/xiaodoudou/PlexIPTV/stargazers) [![Node](https://img.shields.io/badge/Node-%3E%3D22-339933?style=flat-square)](#supported-systems) [![Docker](https://img.shields.io/badge/Docker-image-2496ed?style=flat-square)](docs/docker.md) [![Streams](https://img.shields.io/badge/Streams-MPEG--TS%20%7C%20HLS%20%7C%20RTSP-blueviolet?style=flat-square)](docs/streams.md)
 
-This app simulates a DVR device for Plex, so an IPTV subscription shows up as live TV. Point it at
-an m3u playlist or at an Xtream account and Plex sees an HDHomeRun tuner.
+This app simulates a DVR device for Plex, so an IPTV subscription shows up as live TV. Point it at an m3u playlist or at an Xtream account and Plex sees an HDHomeRun tuner.
 
 </div>
 
@@ -32,9 +25,7 @@ an m3u playlist or at an Xtream account and Plex sees an HDHomeRun tuner.
 
 ## Getting started
 
-Download a binary from the [release page](https://github.com/xiaodoudou/PlexIPTV/releases)
-and run it. On the first start it writes a `settings.json` next to itself and
-prints a generated dashboard password to the console.
+Grab a binary from the [release page](https://github.com/xiaodoudou/PlexIPTV/releases) and run it. It drops a `settings.json` beside itself and prints a dashboard password to the console, which is worth noting down.
 
 Put your provider in `settings.json`:
 
@@ -62,7 +53,7 @@ Or a playlist URL instead:
 }
 ```
 
-Restart, then add the tuner in Plex as an HDHomeRun at `your-server:1234`.
+Restart it, then add the tuner in Plex as an HDHomeRun at `your-server:1234`. That is the whole setup.
 
 Running from source instead:
 
@@ -87,8 +78,7 @@ npm start
 
 ## Supported systems
 
-Tested mostly on Windows, but it should work anywhere Node 22 or newer runs.
-If something goes wrong, please open an issue with the full logs:
+Mostly tested on Windows, though it should run anywhere Node 22 or newer does. If something breaks, open an issue and include the full logs:
 
 - Linux
 ```bash
@@ -105,11 +95,11 @@ set DEBUG=* & PlexIPTV.win.x64.exe & set debug =
 
 ## Why this exists
 
-I wrote it because the alternatives did not fit:
+I wrote it because nothing else quite fit:
 
-- [tvhProxy](https://github.com/jkaberg/tvhProxy) was more complex than I needed
-- [telly](https://github.com/tombowditch/telly) was not flexible enough for my use
-- none of them pulled a remote playlist
+- [tvhProxy](https://github.com/jkaberg/tvhProxy) was more than I needed
+- [telly](https://github.com/tombowditch/telly) was not flexible enough
+- and none of them would pull a playlist from a URL
 
 ## TODO
 

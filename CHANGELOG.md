@@ -5,28 +5,23 @@ current work in progress:
  - investigating why buffer is failing on some specific IPTV vendor
 
 1.6.0:
- - "sources" takes a list, so several Xtream accounts and playlist URLs can be
-   combined into one lineup. The playlists are merged before parsing, so
-   filters, renaming, channel numbers and the limit run once over the whole
-   lineup and two providers cannot both claim the same channel number
- - one provider being unreachable no longer costs you the others: each is
-   loaded on its own and a failure is named and skipped
- - guides are merged as well, each source bringing its own
- - a read only dashboard at /dashboard behind a password, showing what is
-   playing, who is watching, the configured sources, recent warnings and
-   errors and a log tail. The password is stored as an scrypt hash, and one is
-   generated on first start and written to the console rather than the log
- - credentials no longer reach the log through the URLs ffmpeg quotes back in
-   its diagnostics. Only credentials named in the settings file were scrubbed
-   before, so a channel URL carrying its own was written out in clear
- - a channel now starts in about four seconds rather than twelve. Reaching the
-   live edge meant delivering nothing until the next playlist refresh
- - a source that resolves but never sends video is given up on and the reason
-   is shown as a video card, instead of leaving the player on an open socket
-   that never receives a response
- - lint, tests on Node 22, 24 and 26, and a production dependency audit run on
-   every push and pull request; a version tag builds the binaries and attaches
-   them to the release
+ - "sources" takes a list, so several accounts and playlist URLs become one
+   lineup. Merged before parsing, so filters, renaming and numbering run once
+   over the lot and two providers cannot claim the same channel number
+ - one provider going down no longer costs you the others
+ - guides are merged too, each source bringing its own
+ - a read only dashboard at /dashboard, behind a password, showing what is
+   playing, who is watching, the sources, recent errors and a log tail. The
+   password is stored as a hash; one is generated on first start and printed
+   to the console rather than the log
+ - fixed: credentials leaked into the log through the URLs ffmpeg quotes back
+   in its diagnostics. Only credentials named in settings were scrubbed, so a
+   channel URL carrying its own was written out in clear
+ - channels now start in about four seconds instead of twelve
+ - a source that never sends video is given up on and says why, on screen,
+   instead of leaving the player waiting on a socket that never answers
+ - lint, tests on Node 22, 24 and 26 and a dependency audit on every push; a
+   version tag builds the binaries and attaches them to the release
 
 1.5.0:
  - an Xtream account can be configured with its url, username and password

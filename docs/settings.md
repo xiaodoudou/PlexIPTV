@@ -2,9 +2,7 @@
 
 Every key in `settings.json`, and how filters behave.
 
-Your `settings.json` contains your provider URL, which for most providers
-embeds your username and password. It is written with `0600` permissions, and
-it is in `.gitignore`, keep it that way.
+Your `settings.json` contains your provider URL, which for most providers embeds your username and password. It is written with `0600` permissions, and it is in `.gitignore`, keep it that way.
 
 ```javascript
 {
@@ -55,9 +53,7 @@ it is in `.gitignore`, keep it that way.
 
 ## How filters behave
 
-**`name` and `meta` are regular expressions, not plain text.** Characters that
-are punctuation to a regex have to be escaped, and in JSON the backslash itself
-has to be doubled:
+**`name` and `meta` are regular expressions, not plain text.** Characters that are punctuation to a regex have to be escaped, and in JSON the backslash itself has to be doubled:
 
 | To match | Write |
 | --- | --- |
@@ -65,32 +61,23 @@ has to be doubled:
 | `Canal+` | `"name": "Canal\\+"` |
 | `Sky Sports F1` | `"name": "Sky Sports F1"` (nothing to escape) |
 
-Unescaped, `Canal+` means "Cana" followed by one or more `l`, and `TVA (FR)`
-matches `TVA FR` without the brackets, which is why those filters appear to do
-nothing. An invalid pattern is reported in the log and skipped rather than
-taking the server down.
+Unescaped, `Canal+` means "Cana" followed by one or more `l`, and `TVA (FR)` matches `TVA FR` without the brackets, which is why those filters appear to do nothing. An invalid pattern is reported in the log and skipped rather than taking the server down.
 
-A filter that matches no channels is reported at startup, with the escaped
-pattern to copy if that is what went wrong:
+A filter that matches no channels is reported at startup, with the escaped pattern to copy if that is what went wrong:
 
 ```
 Filter #1 (name "Canal + 1 HD PL") matched no channels. Patterns are regular
 expressions, so if you meant that literally, write it as "Canal \+ 1 HD PL".
 ```
 
-**A filter that matches several channels numbers them consecutively** from its
-`channel`. A filter of `"name": "^UK:"` with `"channel": "100"` gives the first
-match 100, the next 101, and so on. Plex keeps only one channel per number, so
-without this a whole group would collapse into a single entry.
+**A filter that matches several channels numbers them consecutively** from its `channel`. A filter of `"name": "^UK:"` with `"channel": "100"` gives the first match 100, the next 101, and so on. Plex keeps only one channel per number, so without this a whole group would collapse into a single entry.
 
 **Omit `channel`** and matching channels are auto-numbered from 80000 instead.
 
-**Filter a whole group** through `meta`, which is matched against the entire
-`#EXTINF` line, including `group-title`:
+**Filter a whole group** through `meta`, which is matched against the entire `#EXTINF` line, including `group-title`:
 
 ```javascript
 { "meta": "group-title=\"FRENCH\"", "channel": "1" }
 ```
 
-**When both `name` and `meta` are given, both must match.** A filter that sets
-neither is ignored, since it would otherwise claim every channel.
+**When both `name` and `meta` are given, both must match.** A filter that sets neither is ignored, since it would otherwise claim every channel.
