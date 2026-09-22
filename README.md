@@ -349,7 +349,8 @@ only.
 - [x] Xtream account support
 - [x] RTSP channels
 - [x] Channel logos and an XMLTV guide
-- [ ] Merge multiples online playlist
+- [x] Merge multiples online playlist
+- [ ] Editing settings from the dashboard
 
 ## How to build yourself the app?
 Requires Node.js 22 or newer. After running `npm install`, `npm run build`
@@ -394,8 +395,31 @@ dependencies that actually ship.
 ## Changelogs
 ```
 current work in progress:
- - online playlist merging
  - investigating why buffer is failing on some specific IPTV vendor
+
+1.6.0:
+ - "sources" takes a list, so several Xtream accounts and playlist URLs can be
+   combined into one lineup. The playlists are merged before parsing, so
+   filters, renaming, channel numbers and the limit run once over the whole
+   lineup and two providers cannot both claim the same channel number
+ - one provider being unreachable no longer costs you the others: each is
+   loaded on its own and a failure is named and skipped
+ - guides are merged as well, each source bringing its own
+ - a read only dashboard at /dashboard behind a password, showing what is
+   playing, who is watching, the configured sources, recent warnings and
+   errors and a log tail. The password is stored as an scrypt hash, and one is
+   generated on first start and written to the console rather than the log
+ - credentials no longer reach the log through the URLs ffmpeg quotes back in
+   its diagnostics. Only credentials named in the settings file were scrubbed
+   before, so a channel URL carrying its own was written out in clear
+ - a channel now starts in about four seconds rather than twelve. Reaching the
+   live edge meant delivering nothing until the next playlist refresh
+ - a source that resolves but never sends video is given up on and the reason
+   is shown as a video card, instead of leaving the player on an open socket
+   that never receives a response
+ - lint, tests on Node 22, 24 and 26, and a production dependency audit run on
+   every push and pull request; a version tag builds the binaries and attaches
+   them to the release
 
 1.5.0:
  - an Xtream account can be configured with its url, username and password
