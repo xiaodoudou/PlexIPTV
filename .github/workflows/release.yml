@@ -1,0 +1,83 @@
+name: Release
+
+on:
+  push:
+    # Matches the bare version tags this project already uses, e.g. 1.5.0.
+    tags: ['[0-9]+.[0-9]+.[0-9]+']
+  # Lets the binaries be built from a branch without cutting a release; the
+  # results are attached to the run as artifacts instead.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build and publish binaries
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      # gh release upload writes to the repository's releases.
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          # The pkg targets are node26, so build on the runtime they ship.
+          node-version: 26.x
+          cache: npm
+
+      - name: Check the tag matches package.json
+        if: github.event_name == 'push'
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          if [ "$GITHUB_REF_NAME" != "$version" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match package.json version $version"
+            exit 1
+          fi
+
+      # Matches CI, so the ffmpeg-dependent tests below are not silently skipped.
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+
+      # The full install: pkg and npm-run-all are devDependencies.
+      - run: npm ci
+
+      # Guard against shipping a build that would not have passed CI.
+      - run: npm run lint
+      - run: npm test
+
+      # pkg downloads a base binary per target on first use; caching them keeps
+      # repeat runs from re-fetching several hundred megabytes.
+      - name: Cache pkg base binaries
+        uses: actions/cache@v6
+        with:
+          path: ~/.pkg-cache
+          key: pkg-cache-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: pkg-cache-${{ runner.os }}-
+
+      - run: npm run build
+
+      - name: List what was built
+        run: ls -lh build
+
+      - name: Attach the binaries to the run
+        uses: actions/upload-artifact@v7
+        with:
+          name: PlexIPTV-binaries
+          path: build/*
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Publish the binaries to the release
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # `gh release create` makes the tag, so the release usually exists by
+          # the time this runs. Create it only when the tag was pushed on its own.
+          if ! gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --generate-notes
+          fi
+          gh release upload "$GITHUB_REF_NAME" build/* --clobber
