@@ -11,10 +11,9 @@ const fs = require('fs')
 const Preloader = require('./stream/preloader')
 const DVR = require('./device/dvr')
 const Config = require('./config')
-const { fetchText } = require('./net/httpClient')
-const { extractCredentials, redactUrl } = require('./net/netGuard')
+const { extractCredentials } = require('./net/netGuard')
 const { parsePlaylist } = require('./sources/playlist')
-const Xtream = require('./sources/xtream')
+const Sources = require('./sources/sources')
 const { sendSlate } = require('./stream/slate')
 const { mount: mountDashboard } = require('./dashboard')
 const LoggerClass = require('./logger')
@@ -53,8 +52,7 @@ class Server {
     this.channels = []
 
     // Bindings
-    this.pullPlaylist = this.pullPlaylist.bind(this)
-    this.pullXtream = this.pullXtream.bind(this)
+    this.pullSources = this.pullSources.bind(this)
     this.readPlaylist = this.readPlaylist.bind(this)
     this.proxy = this.proxy.bind(this)
   }
@@ -67,15 +65,12 @@ class Server {
       for (const secret of extractCredentials(settings.m3u8 && settings.m3u8.remote)) {
         LoggerClass.addSecret(secret)
       }
-      for (const secret of Xtream.secrets(settings.xtream)) {
+      for (const secret of Sources.secrets(settings)) {
         LoggerClass.addSecret(secret)
       }
       this.express.serverHost = settings.serverHost
       this.express.serverPort = settings.serverPort
-      let getPlaylist = this.pullPlaylist
-      if (Xtream.isConfigured(settings)) {
-        getPlaylist = this.pullXtream
-      }
+      let getPlaylist = this.pullSources
       if (this.settings.doNotPullRemotePlaylist) {
         getPlaylist = this.readPlaylist
       }
@@ -129,20 +124,23 @@ class Server {
   }
 
   /**
-   * Builds the channel list from an Xtream account rather than a playlist URL.
-   * The catalogue is turned into a playlist so filters, renaming, the limit and
-   * the URL checks all behave exactly as they do for a normal m3u.
+   * Loads every configured source and merges them into one playlist.
+   *
+   * A provider being unreachable costs you that provider's channels and
+   * nothing else. Only when every source fails does this fall back to the copy
+   * saved on the last successful run.
    */
-  pullXtream () {
+  pullSources () {
     const deferred = Q.defer()
-    Logger.info(`Reading the Xtream catalogue from: ${Xtream.baseUrl(this.settings.xtream)}`)
-    Xtream.buildPlaylist(this.settings.xtream, {
+    const names = Sources.describeSources(this.settings).map((source, index) => Sources.describe(source, index))
+    Logger.info(`Loading ${names.length} source${names.length === 1 ? '' : 's'}: ${names.join(', ')}`)
+
+    Sources.loadAll(this.settings, {
       allowPrivateNetwork: Boolean(this.settings.allowPrivateNetwork)
-    }).then((m3u8) => {
-      this.savePlaylist(m3u8, deferred)
+    }).then((result) => {
+      this.savePlaylist(result.body, deferred)
     }).catch((error) => {
-      Logger.error(`Could not read the Xtream account: ${error.message}`)
-      // A cached playlist from a previous run is better than no television.
+      Logger.error(`Could not load any source: ${error.message}`)
       this.readPlaylist().then((cached) => {
         Logger.warn('Falling back to the last playlist saved to disk.')
         deferred.resolve(cached)
@@ -152,9 +150,9 @@ class Server {
   }
 
   /**
-   * Writes the playlist beside the settings so a later run can fall back to it.
-   * It mirrors the provider's catalogue, credentials and all, so it is written
-   * owner-only.
+   * Writes the merged playlist beside the settings so a later run can fall back
+   * to it. It mirrors the providers' catalogues, credentials and all, so it is
+   * written owner-only.
    */
   savePlaylist (body, deferred) {
     fs.writeFile(this.settings.m3u8.local, body, { encoding: 'utf8', mode: PLAYLIST_FILE_MODE }, (error) => {
@@ -170,40 +168,6 @@ class Server {
       Logger.info(`Successfully saved playlist to: ${this.settings.m3u8.local}`)
       deferred.resolve(body)
     })
-  }
-
-  pullPlaylist () {
-    const deferred = Q.defer()
-    const remote = this.settings.m3u8.remote
-    // Provider URLs embed the subscriber's username and password; only the
-    // redacted form reaches the log file.
-    Logger.info(`Pulling remote playlist: ${redactUrl(remote)}`)
-    fetchText(remote, {
-      allowPrivateNetwork: Boolean(this.settings.allowPrivateNetwork)
-    }).then((body) => {
-      Logger.verbose('Writting to local files...')
-      fs.writeFile(this.settings.m3u8.local, body, { encoding: 'utf8', mode: PLAYLIST_FILE_MODE }, (error) => {
-        if (error) {
-          deferred.reject(error)
-        } else {
-          try {
-            fs.chmodSync(this.settings.m3u8.local, PLAYLIST_FILE_MODE)
-          } catch (chmodError) {
-            Logger.warn(`Could not restrict permissions on ${this.settings.m3u8.local}: ${chmodError.message}`)
-          }
-          Logger.info(`Successfully saved playlist to: ${this.settings.m3u8.local}`)
-          deferred.resolve(body)
-        }
-      })
-    }).catch((error) => {
-      Logger.error('Error happen during playlist pull:', error.message)
-      this.readPlaylist().then((m3u8) => {
-        deferred.resolve(m3u8)
-      }).catch((readError) => {
-        deferred.reject(readError)
-      })
-    })
-    return deferred.promise
   }
 
   proxy (req, res, next) {
