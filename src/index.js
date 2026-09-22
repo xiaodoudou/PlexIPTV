@@ -245,7 +245,7 @@ class Server {
       // Shown as video where possible. A 502 makes Plex draw its own generic
       // failure, which tells the viewer nothing; a slate puts the actual
       // reason, such as the line already being in use, on the screen.
-      if (sendSlate(res, `Cannot play ${line.name}`, explanation)) return
+      if (sendSlate(res, 'Oops an error occured!', `Error: ${explanation}`)) return
       res.status(502).type('text/plain').send(`Cannot play ${line.name}: ${explanation}\n`)
     }
 
