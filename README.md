@@ -4,6 +4,7 @@
 
 > An IPTV subscription as live TV in Plex, by pretending to be an HDHomeRun tuner
 
+[![Build](https://img.shields.io/github/actions/workflow/status/xiaodoudou/PlexIPTV/ci.yml?branch=master&style=flat-square&label=build)](https://github.com/xiaodoudou/PlexIPTV/actions/workflows/ci.yml)
 [![GitHub Release](https://img.shields.io/github/v/release/xiaodoudou/PlexIPTV?style=flat-square&color=e94560)](https://github.com/xiaodoudou/PlexIPTV/releases/latest)
 [![License](https://img.shields.io/badge/License-Apache--2.0-blue?style=flat-square)](https://github.com/xiaodoudou/PlexIPTV/blob/master/LICENSE)
 [![Stars](https://img.shields.io/github/stars/xiaodoudou/PlexIPTV?style=flat-square&color=yellow)](https://github.com/xiaodoudou/PlexIPTV/stargazers)
