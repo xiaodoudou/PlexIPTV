@@ -118,7 +118,7 @@ test('a malformed manifest does not throw', () => {
   assert.doesNotThrow(() => parseManifest(null, 'http://example.com/l.m3u8'))
 })
 
-test('the reader starts at the live edge and then follows new segments', async (t) => {
+test('the reader starts one segment back from the live edge and then follows new segments', async (t) => {
   let sequence = 10
   const served = []
   const { server, port } = await listen((req, res) => {
@@ -144,10 +144,13 @@ test('the reader starts at the live edge and then follows new segments', async (
   reader.on('error', () => {})
   reader.start()
 
-  // First pass: the window that already exists is skipped rather than
-  // replayed, so a channel does not start half a minute behind.
+  // First pass: the last segment of the existing window is delivered so the
+  // player has picture straight away, and the rest of the window is skipped so
+  // the channel does not start half a minute behind. Skipping all of it meant
+  // nothing arrived until the next refresh, which is roughly twelve seconds of
+  // black screen on every channel change.
   await settle(600)
-  assert.deepStrictEqual(served, [], 'nothing downloaded from the initial window')
+  assert.deepStrictEqual(served, [12], 'only the newest segment of the initial window is fetched')
 
   // The window rolls forward; the new segments should be picked up.
   sequence = 13
@@ -320,4 +323,62 @@ test('TS segments are passed through untouched, so no transcoding is involved', 
   assert.strictEqual(body[188], 0x47, 'packet boundaries are intact')
   // Byte-for-byte identical to what the origin served: no re-encoding.
   assert.strictEqual(body.slice(0, 376).equals(tsSegment(0xAB)), true)
+})
+
+test('a playlist that never yields a segment is given up on rather than hung on', async (t) => {
+  // The bundled demo playlist was exactly this: an M3U channel list rather
+  // than a media playlist. refresh() looped for ever, so the viewer held an
+  // open socket that never received a single byte or a response header.
+  const { server, port } = await listen((req, res) => {
+    res.writeHead(200, { 'Content-Type': 'application/x-mpegurl' })
+    // Valid, parses cleanly, and never contains a segment.
+    res.end(['#EXTM3U', '#EXT-X-TARGETDURATION:1', '#EXT-X-MEDIA-SEQUENCE:0', ''].join('\n'))
+  })
+  t.after(() => server.close())
+
+  const reader = new HlsReader('http://127.0.0.1:' + port + '/live.m3u8',
+    Object.assign({}, LOCAL, { noDataTimeoutMs: 700 }))
+  const error = await new Promise((resolve) => {
+    reader.on('data', () => {})
+    reader.on('error', resolve)
+    reader.start()
+  })
+  reader.stop()
+
+  assert.match(error.message, /produced no video/)
+  // Retrying cannot help, and retried as an ordinary failure this took nearly
+  // two minutes to give up, long after any player had walked away.
+  assert.strictEqual(error.fatal, true, 'the failure is marked fatal')
+})
+
+test('the watchdog does not fire once segments are arriving', async (t) => {
+  let sequence = 0
+  const { server, port } = await listen((req, res) => {
+    if (req.url.indexOf('/live.m3u8') === 0) {
+      const lines = ['#EXTM3U', '#EXT-X-TARGETDURATION:1', '#EXT-X-MEDIA-SEQUENCE:' + sequence]
+      for (let i = 0; i < 2; i++) {
+        lines.push('#EXTINF:1.0,')
+        lines.push('/seg/' + (sequence + i) + '.ts')
+      }
+      sequence = sequence + 1
+      res.writeHead(200, { 'Content-Type': 'application/x-mpegurl' })
+      return res.end(lines.join('\n'))
+    }
+    res.writeHead(200, { 'Content-Type': 'video/mp2t' })
+    res.end(tsSegment(1))
+  })
+  t.after(() => server.close())
+
+  const reader = new HlsReader('http://127.0.0.1:' + port + '/live.m3u8',
+    Object.assign({}, LOCAL, { noDataTimeoutMs: 800 }))
+  const errors = []
+  const chunks = []
+  reader.on('data', (chunk) => chunks.push(chunk))
+  reader.on('error', (error) => errors.push(error))
+  reader.start()
+  await settle(1600)
+  reader.stop()
+
+  assert.ok(chunks.length > 0, 'segments were delivered')
+  assert.deepStrictEqual(errors, [], 'a working channel is never given up on')
 })

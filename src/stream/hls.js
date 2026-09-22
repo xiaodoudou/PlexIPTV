@@ -12,6 +12,12 @@ const MIN_REFRESH_MS = 1000
 const MAX_REFRESH_MS = 10000
 // Guards against a master playlist that points at another master playlist.
 const MAX_VARIANT_DEPTH = 3
+// How many segments back from the live edge a channel starts.
+const START_SEGMENTS = 1
+// A source that resolves and then never yields a segment used to leave the
+// viewer on an open socket with no response at all. This is the HLS equivalent
+// of the RTSP watchdog: past this, the channel is reported as unplayable.
+const NO_DATA_TIMEOUT_MS = 20000
 // A live window is short; this only bounds the memory used for de-duplication.
 const MAX_REMEMBERED_SEGMENTS = 512
 
@@ -108,6 +114,11 @@ class HlsReader extends EventEmitter {
     this.mode = 'unknown'
     this.remuxer = null
     this.initSent = null
+    this.produced = false
+    this.noDataTimer = null
+    this.noDataTimeoutMs = this.options.noDataTimeoutMs != null
+      ? this.options.noDataTimeoutMs
+      : NO_DATA_TIMEOUT_MS
 
     this.start = this.start.bind(this)
     this.stop = this.stop.bind(this)
@@ -115,13 +126,46 @@ class HlsReader extends EventEmitter {
   }
 
   async start () {
+    this.armNoDataWatchdog()
     try {
       this.url = await this.resolveVariant(this.url, MAX_VARIANT_DEPTH)
     } catch (error) {
+      this.clearNoDataWatchdog()
       if (!this.stopped) this.emit('error', error)
       return
     }
     this.refresh()
+  }
+
+  /**
+   * Gives up on a source that resolves but never produces video.
+   *
+   * A playlist that is really another channel list, or one whose segment window
+   * never advances, otherwise leaves refresh() looping for ever: no bytes, no
+   * error, and a viewer holding an open socket that never receives a response.
+   */
+  armNoDataWatchdog () {
+    if (this.noDataTimeoutMs <= 0 || this.noDataTimer) return
+    this.noDataTimer = setTimeout(() => {
+      this.noDataTimer = null
+      if (this.stopped || this.produced) return
+      const seconds = Math.round(this.noDataTimeoutMs / 1000)
+      const error = new Error(
+        `the channel produced no video within ${seconds}s. The source resolved but never delivered a segment, which usually means the URL is a channel list rather than a stream, or the provider stopped publishing it.`
+      )
+      // Retrying will not help: the source answered, it simply is not a
+      // stream. Retried like an ordinary failure it would take nearly two
+      // minutes to give up, by which time every player has walked away.
+      error.fatal = true
+      this.emit('error', error)
+    }, this.noDataTimeoutMs)
+    if (this.noDataTimer.unref) this.noDataTimer.unref()
+  }
+
+  clearNoDataWatchdog () {
+    if (!this.noDataTimer) return
+    clearTimeout(this.noDataTimer)
+    this.noDataTimer = null
   }
 
   /**
@@ -180,15 +224,24 @@ class HlsReader extends EventEmitter {
    * Downloads every segment newer than the last one delivered, in order.
    */
   async pump (manifest) {
+    // On the first pass, start START_SEGMENTS back from the live edge.
+    //
+    // Skipping the window entirely meant nothing was delivered until the next
+    // refresh came round, which put roughly twelve seconds of black screen in
+    // front of every channel change. Players that give up before then look as
+    // though the channel is dead. Starting one segment back puts picture on
+    // screen at once, typically two to six seconds behind live, which is not
+    // noticeable on a television channel.
+    if (this.nextSequence === null) {
+      this.nextSequence = manifest.mediaSequence + Math.max(0, manifest.segments.length - START_SEGMENTS)
+    }
+
     let sequence = manifest.mediaSequence
     for (const segment of manifest.segments) {
       const current = sequence
       sequence = sequence + 1
       if (this.stopped) return
 
-      // On the first pass, start at the live edge rather than replaying the
-      // whole window, which is what makes a channel start half a minute behind.
-      if (this.nextSequence === null) continue
       if (current < this.nextSequence) continue
       if (this.seen.has(segment.url)) continue
 
@@ -196,10 +249,6 @@ class HlsReader extends EventEmitter {
       this.remember(segment.url)
       this.nextSequence = current + 1
       if (body && body.length > 0) await this.deliver(body, manifest)
-    }
-    if (this.nextSequence === null) {
-      // The next refresh delivers whatever has appeared since.
-      this.nextSequence = sequence
     }
   }
 
@@ -232,6 +281,7 @@ class HlsReader extends EventEmitter {
 
     if (this.stopped) return
     if (this.mode === 'ts') {
+      this.noteProduced()
       this.emit('data', body)
     } else if (this.remuxer) {
       this.remuxer.write(body)
@@ -241,7 +291,9 @@ class HlsReader extends EventEmitter {
   startRemuxer () {
     const remuxer = new Remuxer()
     remuxer.on('data', (chunk) => {
-      if (!this.stopped) this.emit('data', chunk)
+      if (this.stopped) return
+      this.noteProduced()
+      this.emit('data', chunk)
     })
     remuxer.on('error', (error) => {
       if (this.stopped) return
@@ -304,9 +356,16 @@ class HlsReader extends EventEmitter {
     })
   }
 
+  noteProduced () {
+    if (this.produced) return
+    this.produced = true
+    this.clearNoDataWatchdog()
+  }
+
   stop () {
     if (this.stopped) return
     this.stopped = true
+    this.clearNoDataWatchdog()
     if (this.timer) {
       clearTimeout(this.timer)
       this.timer = null
