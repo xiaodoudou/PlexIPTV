@@ -1,6 +1,6 @@
 const { SsdpServer } = require('./ssdp')
 const { buildChannelElements, buildIdMap, guessEpgUrl, pipeProgrammes } = require('../sources/xmltv')
-const Xtream = require('../sources/xtream')
+const Sources = require('../sources/sources')
 const NEWLINE = String.fromCharCode(10)
 const Logger = new (require('../logger'))()
 
@@ -221,15 +221,11 @@ class DVR {
   guide (req, res, next) {
     Logger.verbose('Received a guide request.')
     const settings = this.server.settings || {}
-    const configured = typeof settings.epgUrl === 'string' ? settings.epgUrl.trim() : ''
-    let epgUrl = configured
-    if (epgUrl.length === 0 && Xtream.isConfigured(settings)) {
-      // The account already says where its guide lives, so there is nothing to
-      // infer from a playlist URL.
-      epgUrl = Xtream.epgUrl(settings.xtream)
-    }
-    if (epgUrl.length === 0) {
-      epgUrl = guessEpgUrl(settings.m3u8 && settings.m3u8.remote)
+    // Every source can bring its own guide, so they are all merged in turn.
+    const feeds = Sources.epgUrls(settings)
+    if (feeds.length === 0) {
+      const guessed = guessEpgUrl(settings.m3u8 && settings.m3u8.remote)
+      if (guessed.length > 0) feeds.push(guessed)
     }
 
     res.set('Content-Type', 'application/xml; charset=utf-8')
@@ -242,7 +238,7 @@ class DVR {
     const withLogos = this.server.channels.filter((line) => line.logo).length
     Logger.verbose(`Guide: ${this.server.channels.length} channels, ${withLogos} with a logo.`)
 
-    if (epgUrl.length === 0) {
+    if (feeds.length === 0) {
       Logger.verbose('No guide URL is configured or derivable, serving channels only.')
       res.end('</tv>' + NEWLINE)
       return
@@ -251,13 +247,23 @@ class DVR {
     let closed = false
     req.on('close', () => { closed = true })
 
-    pipeProgrammes(epgUrl, buildIdMap(this.server.channels), {
-      allowPrivateNetwork: Boolean(settings.allowPrivateNetwork)
-    }, (text) => {
+    const idMap = buildIdMap(this.server.channels)
+    const write = (text) => {
       if (!closed && !res.writableEnded) res.write(text)
-    }).then(() => {
-      if (!closed && !res.writableEnded) res.end('</tv>' + NEWLINE)
-    })
+    }
+
+    // One guide at a time, so a slow provider does not hold up the others'
+    // programmes, and a broken one costs only its own.
+    const pipeFeed = (index) => {
+      if (closed || index >= feeds.length) {
+        if (!closed && !res.writableEnded) res.end('</tv>' + NEWLINE)
+        return
+      }
+      pipeProgrammes(feeds[index], idMap, {
+        allowPrivateNetwork: Boolean(settings.allowPrivateNetwork)
+      }, write).then(() => pipeFeed(index + 1))
+    }
+    pipeFeed(0)
   }
 
   device (req, res, next) {

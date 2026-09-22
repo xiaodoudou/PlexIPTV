@@ -29,7 +29,8 @@ ___
 Raw MPEG-TS, HLS and RTSP streams all play. See
 [Streams and formats](#streams-and-formats) for what happens to each, and
 [Xtream accounts](#xtream-accounts) if your provider gave you a login rather
-than a playlist URL.
+than a playlist URL, and [Several providers at once](#several-providers-at-once)
+if you have more than one.
 
 ## What it does?
 - takes an m3u playlist URL or an Xtream username and password
@@ -97,6 +98,58 @@ later start.
 
 Set `m3u8.remote` instead if you have a playlist URL. If both are present, the
 Xtream account wins.
+
+## Several providers at once
+
+`sources` takes a list, so accounts and playlists can be combined into one
+lineup. Each entry is either an Xtream account or a playlist URL:
+
+```javascript
+{
+  "sources": [
+    {
+      "name": "Main line",
+      "type": "xtream",
+      "url": "http://line.your-provider.tv",
+      "username": "your-username",
+      "password": "your-password"
+    },
+    {
+      "name": "Sports pack",
+      "type": "m3u",
+      "url": "http://other-provider.tv/get.php?username=...&password=...&type=m3u_plus"
+    }
+  ]
+}
+```
+
+`type` can be left out: an entry with a username and a password is read as an
+Xtream account, anything else as a playlist URL. `name` is only used in the log
+and on the dashboard, and falls back to the host.
+
+The playlists are merged before anything else happens, so filters, renaming,
+channel numbers and the limit all run once over the combined lineup. Two
+providers cannot both claim channel 80000, and a filter can match channels from
+either of them.
+
+One provider being down does not cost you the others. Each is loaded
+independently, a failure is reported and skipped, and only if every one of them
+fails does the app fall back to the cached copy:
+
+```
+Loaded 412 channels from line.your-provider.tv.
+Could not load Sports pack: Unexpected status 502 from other-provider.tv.
+Carrying on without Sports pack. 1 of 2 sources loaded.
+```
+
+Guides are merged too. Each entry can carry its own `epgUrl`, an Xtream account
+uses the guide belonging to that account, and the programmes from all of them
+are served as one XMLTV feed. A single `epgUrl` at the top level overrides the
+lot.
+
+`sources` takes precedence over the older single `xtream` block and
+`m3u8.remote`, both of which still work, so nothing needs changing on an
+upgrade.
 
 ## Settings
 
