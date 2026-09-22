@@ -8,7 +8,6 @@
 ![License](https://img.shields.io/badge/License-Apache--2.0-blue?style=flat-square)
 ![GitHub Stars](https://img.shields.io/github/stars/xiaodoudou/PlexIPTV?style=flat-square&color=yellow)
 ![Node](https://img.shields.io/badge/Node-%3E%3D22-339933?style=flat-square)
-![Docker Pulls](https://img.shields.io/docker/pulls/xiaodoudoufr/plexiptv?style=flat-square&color=2496ed)
 ![Streams](https://img.shields.io/badge/Streams-MPEG--TS%20%7C%20HLS%20%7C%20RTSP-blueviolet?style=flat-square)
 
 This app simulates a DVR device for Plex, so an IPTV subscription shows up as live TV. Point it at
