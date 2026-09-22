@@ -1,6 +1,6 @@
-const { fetchText } = require('./httpClient')
-const { redactUrl } = require('./netGuard')
-const Logger = new (require('./logger'))()
+const { fetchText } = require('../net/httpClient')
+const { redactUrl } = require('../net/netGuard')
+const Logger = new (require('../logger'))()
 
 // The live stream catalogue of a large provider runs to tens of megabytes, so
 // the default body cap is nowhere near enough for this.

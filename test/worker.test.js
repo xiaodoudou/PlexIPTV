@@ -8,7 +8,7 @@ const assert = require('node:assert')
 const fs = require('node:fs')
 const http = require('node:http')
 const path = require('node:path')
-const Worker = require('../worker')
+const Worker = require('../src/stream/worker')
 
 const LOG_FILE = path.join(tmpDir, 'logs.txt')
 // Entirely synthetic credentials: never put a real subscription in the repo.

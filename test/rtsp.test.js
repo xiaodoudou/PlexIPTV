@@ -8,10 +8,10 @@ const fs = require('node:fs')
 const path = require('node:path')
 const { spawnSync } = require('node:child_process')
 const net = require('node:net')
-const Worker = require('../worker')
-const { parsePlaylist } = require('../playlist')
-const { assertSafeUrl, assertStreamUrl, isRtsp } = require('../netGuard')
-const { RTSP_PROTOCOL_WHITELIST, isAvailable, rtspArgs } = require('../remux')
+const Worker = require('../src/stream/worker')
+const { parsePlaylist } = require('../src/sources/playlist')
+const { assertSafeUrl, assertStreamUrl, isRtsp } = require('../src/net/netGuard')
+const { RTSP_PROTOCOL_WHITELIST, isAvailable, rtspArgs } = require('../src/stream/remux')
 
 const LOG_FILE = path.join(tmpDir, 'logs.txt')
 const REPO = path.join(__dirname, '..')
@@ -80,7 +80,7 @@ test('ffmpeg is told to copy, not re-encode, and is fenced to rtsp protocols', (
 })
 
 test('the URL is passed as an argument, never through a shell', () => {
-  const source = fs.readFileSync(path.join(REPO, 'remux.js'), 'utf8')
+  const source = fs.readFileSync(path.join(REPO, 'src', 'stream', 'remux.js'), 'utf8')
   assert.ok(!source.includes('shell: true'))
   assert.ok(!source.includes('exec('))
   // A URL containing shell metacharacters is just an opaque argv entry.
@@ -91,7 +91,7 @@ test('the URL is passed as an argument, never through a shell', () => {
 test('without ffmpeg an rtsp channel explains itself instead of failing silently', () => {
   // Availability is probed once per process, so this runs in a child.
   const script = `
-    const Worker = require('./worker')
+    const Worker = require('./src/stream/worker')
     const w = new Worker('g', {
       channel: '1', name: 'France 2',
       url: 'rtsp://cdn.example.com/live',
@@ -166,7 +166,7 @@ test('a source that accepts the socket and says nothing is given up on', {
 }, async () => {
   // ffmpeg's own timeouts do not reliably fire here, so the Remuxer keeps its
   // own watchdog. Without it a wedged provider holds the channel forever.
-  const { Remuxer } = require('../remux')
+  const { Remuxer } = require('../src/stream/remux')
   // A listener that accepts the connection and then says nothing, which is the
   // case the watchdog exists for. A closed port is not the same thing: on Linux
   // the connect is refused at once, ffmpeg exits before the watchdog is due,
@@ -200,7 +200,7 @@ test('the watchdog does not fire once the stream is producing output', {
 }, async () => {
   // Piped input has no watchdog at all; this guards against it being armed for
   // the normal fMP4 path, where a slow first segment would kill a good stream.
-  const { Remuxer } = require('../remux')
+  const { Remuxer } = require('../src/stream/remux')
   const remuxer = new Remuxer()
   remuxer.on('data', () => {})
   remuxer.on('error', () => {})

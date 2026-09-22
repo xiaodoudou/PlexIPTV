@@ -1,6 +1,6 @@
 const fs = require('fs')
 const path = require('path')
-const template = require('./template.json')
+const template = require('../template.json')
 const Q = require('q')
 const Logger = new (require('./logger'))()
 const args = require('args')

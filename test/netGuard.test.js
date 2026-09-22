@@ -2,7 +2,7 @@ require('./helpers').isolate()
 
 const test = require('node:test')
 const assert = require('node:assert')
-const { assertSafeUrl, extractCredentials, guardedLookup, isPrivateAddress, redactUrl } = require('../netGuard')
+const { assertSafeUrl, extractCredentials, guardedLookup, isPrivateAddress, redactUrl } = require('../src/net/netGuard')
 
 test('assertSafeUrl accepts ordinary public http and https URLs', () => {
   assert.strictEqual(assertSafeUrl('http://example.com/a.m3u8').protocol, 'http:')

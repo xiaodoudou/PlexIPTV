@@ -1,4 +1,4 @@
-const packageJson = require('./package.json')
+const packageJson = require('../package.json')
 if (process.env.DEBUG === undefined || process.env.DEBUG === '') {
   process.env.DEBUG = `${packageJson.name}:*:info,${packageJson.name}:*:warn,${packageJson.name}:*:error,${packageJson.name}:*:verbose`
 }

@@ -1,12 +1,12 @@
 const EventEmitter = require('events')
 const DataStream = require('./dataStream')
-const { streamRequest } = require('./httpClient')
-const { isRtsp, redactUrl } = require('./netGuard')
+const { streamRequest } = require('../net/httpClient')
+const { isRtsp, redactUrl } = require('../net/netGuard')
 const { describeUpstreamStatus, isFatalUpstreamStatus } = require('./upstreamStatus')
 const { describePayload, detectPayload } = require('./payload')
 const { HlsReader } = require('./hls')
 const { Remuxer, isAvailable } = require('./remux')
-const Logger = new (require('./logger'))()
+const Logger = new (require('../logger'))()
 
 // An upstream that ends or fails immediately used to be retried in a tight
 // loop, which burns CPU and hammers the provider. Retries are spaced out and

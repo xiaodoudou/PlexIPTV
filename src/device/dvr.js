@@ -1,8 +1,8 @@
 const { SsdpServer } = require('./ssdp')
-const { buildChannelElements, buildIdMap, guessEpgUrl, pipeProgrammes } = require('./xmltv')
-const Xtream = require('./xtream')
+const { buildChannelElements, buildIdMap, guessEpgUrl, pipeProgrammes } = require('../sources/xmltv')
+const Xtream = require('../sources/xtream')
 const NEWLINE = String.fromCharCode(10)
-const Logger = new (require('./logger'))()
+const Logger = new (require('../logger'))()
 
 /**
  * Escapes text before it is interpolated into the device description XML.

@@ -3,7 +3,7 @@ require('./helpers').isolate()
 const test = require('node:test')
 const assert = require('node:assert')
 const http = require('node:http')
-const { fetchText, streamRequest } = require('../httpClient')
+const { fetchText, streamRequest } = require('../src/net/httpClient')
 
 // The test servers live on loopback, which the guard blocks by design, so
 // these tests opt in explicitly. That doubles as coverage of the opt in.

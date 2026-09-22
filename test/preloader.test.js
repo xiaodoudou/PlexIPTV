@@ -2,7 +2,7 @@ require('./helpers').isolate()
 
 const test = require('node:test')
 const assert = require('node:assert')
-const Preloader = require('../preloader')
+const Preloader = require('../src/stream/preloader')
 
 function line (url) {
   return { channel: '1', name: 'Test', url, internalUrl: 'http://localhost:1234/channel/1' }

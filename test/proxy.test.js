@@ -3,7 +3,7 @@ require('./helpers').isolate()
 const test = require('node:test')
 const assert = require('node:assert')
 const EventEmitter = require('node:events')
-const Server = require('../index')
+const Server = require('../src/index')
 
 function fakeReq (channelId) {
   const req = new EventEmitter()

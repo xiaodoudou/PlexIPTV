@@ -3,8 +3,8 @@ require('./helpers').isolate()
 const test = require('node:test')
 const assert = require('node:assert')
 const http = require('node:http')
-const Xtream = require('../xtream')
-const { parsePlaylist } = require('../playlist')
+const Xtream = require('../src/sources/xtream')
+const { parsePlaylist } = require('../src/sources/playlist')
 
 const LOCAL = { allowPrivateNetwork: true }
 const NEWLINE = String.fromCharCode(10)

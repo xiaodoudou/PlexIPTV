@@ -2,7 +2,7 @@ require('./helpers').isolate()
 
 const test = require('node:test')
 const assert = require('node:assert')
-const { parsePlaylist } = require('../playlist')
+const { parsePlaylist } = require('../src/sources/playlist')
 
 const SAMPLE = [
   '#EXTM3U',
@@ -238,7 +238,7 @@ test('rename applies to every channel a filter matches', () => {
 test('a filter that matches nothing says so, with the escaped form to copy', () => {
   // Four separate issues in the tracker were a filter silently matching
   // nothing. Reported literally, a "+" is a quantifier, not a plus sign.
-  const { escapeHint } = require('../playlist')
+  const { escapeHint } = require('../src/sources/playlist')
   const hint = escapeHint('Canal + 1 HD PL')
   assert.match(hint, /regular expressions/)
   assert.match(hint, /Canal/)
@@ -246,7 +246,7 @@ test('a filter that matches nothing says so, with the escaped form to copy', () 
 })
 
 test('no escaping hint is offered for a pattern that has nothing to escape', () => {
-  const { escapeHint } = require('../playlist')
+  const { escapeHint } = require('../src/sources/playlist')
   assert.strictEqual(escapeHint('BBC One HD'), '')
   assert.strictEqual(escapeHint(undefined), '')
   assert.strictEqual(escapeHint(123), '')

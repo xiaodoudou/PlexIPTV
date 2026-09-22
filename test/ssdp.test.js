@@ -4,7 +4,7 @@ const test = require('node:test')
 const assert = require('node:assert')
 const dgram = require('node:dgram')
 const os = require('node:os')
-const { SsdpServer, localAddressFor, sameSubnet } = require('../ssdp')
+const { SsdpServer, localAddressFor, sameSubnet } = require('../src/device/ssdp')
 
 test('an interface on the same subnet as the caller is preferred', () => {
   assert.strictEqual(sameSubnet({ address: '192.168.1.10', netmask: '255.255.255.0' }, '192.168.1.55'), true)

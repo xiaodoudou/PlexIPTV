@@ -1,6 +1,6 @@
 const { spawn, spawnSync } = require('child_process')
 const EventEmitter = require('events')
-const Logger = new (require('./logger'))()
+const Logger = new (require('../logger'))()
 
 // Most HLS streams ship MPEG-TS segments, which Plex accepts as-is. A minority
 // ship fragmented MP4, which cannot simply be concatenated into a transport

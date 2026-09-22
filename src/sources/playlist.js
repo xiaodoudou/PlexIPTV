@@ -1,5 +1,5 @@
-const { assertStreamUrl, redactUrl } = require('./netGuard')
-const Logger = new (require('./logger'))()
+const { assertStreamUrl, redactUrl } = require('../net/netGuard')
+const Logger = new (require('../logger'))()
 
 const PARSING_RULE = /#EXTINF:(.*),(.*)[\r\n]+(.*)/gm
 const DEFAULT_CHANNEL = 80000
