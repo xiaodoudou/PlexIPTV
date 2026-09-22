@@ -90,7 +90,14 @@ function isAvailable () {
  * opens a socket of its own. That keeps the SSRF protections in force.
  */
 class Remuxer extends EventEmitter {
-  constructor () {
+  /**
+   * @param {object} [options]
+   * @param {number} [options.watchdogMs] How long an RTSP source may produce
+   *   nothing before it is given up on. Defaults to the window ffmpeg's own
+   *   timeouts use. Tests shorten it so the watchdog is what fires rather than
+   *   racing ffmpeg at the same value.
+   */
+  constructor (options = {}) {
     super()
     this.process = null
     this.closed = false
@@ -98,6 +105,7 @@ class Remuxer extends EventEmitter {
     this.sourceUrl = null
     this.firstOutput = false
     this.watchdog = null
+    this.watchdogMs = options.watchdogMs || Math.round(RTSP_TIMEOUT_US / 1000)
   }
 
   /**
@@ -134,11 +142,11 @@ class Remuxer extends EventEmitter {
       this.watchdog = setTimeout(() => {
         this.watchdog = null
         if (this.closed || this.firstOutput) return
-        const seconds = Math.round(RTSP_TIMEOUT_US / 1000000)
+        const seconds = Math.round(this.watchdogMs / 1000)
         this.closed = true
         this.killProcess()
         this.emit('error', new Error(`the stream produced nothing within ${seconds}s, so it is not playable`))
-      }, Math.round(RTSP_TIMEOUT_US / 1000))
+      }, this.watchdogMs)
       if (this.watchdog.unref) this.watchdog.unref()
     }
     this.process.stderr.on('data', (chunk) => {

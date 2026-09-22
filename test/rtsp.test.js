@@ -7,6 +7,7 @@ const assert = require('node:assert')
 const fs = require('node:fs')
 const path = require('node:path')
 const { spawnSync } = require('node:child_process')
+const net = require('node:net')
 const Worker = require('../worker')
 const { parsePlaylist } = require('../playlist')
 const { assertSafeUrl, assertStreamUrl, isRtsp } = require('../netGuard')
@@ -165,20 +166,32 @@ test('a source that accepts the socket and says nothing is given up on', {
 }, async () => {
   // ffmpeg's own timeouts do not reliably fire here, so the Remuxer keeps its
   // own watchdog. Without it a wedged provider holds the channel forever.
-  const { Remuxer, RTSP_TIMEOUT_US } = require('../remux')
-  const remuxer = new Remuxer()
+  const { Remuxer } = require('../remux')
+  // A listener that accepts the connection and then says nothing, which is the
+  // case the watchdog exists for. A closed port is not the same thing: on Linux
+  // the connect is refused at once, ffmpeg exits before the watchdog is due,
+  // and the test passes or fails on the platform's refusal timing instead.
+  const accepted = []
+  const silent = net.createServer((socket) => accepted.push(socket))
+  await new Promise((resolve) => silent.listen(0, '127.0.0.1', resolve))
+  const { port } = silent.address()
+  // Well inside ffmpeg's own timeout, so the watchdog is what gives up.
+  const watchdogMs = 2000
+  const remuxer = new Remuxer({ watchdogMs })
   const started = Date.now()
   remuxer.on('data', () => {})
   const error = await new Promise((resolve) => {
     remuxer.on('error', resolve)
     remuxer.on('end', () => resolve(new Error('ended')))
-    remuxer.start('rtsp://127.0.0.1:9/live')
+    remuxer.start(`rtsp://127.0.0.1:${port}/live`)
   })
   remuxer.stop()
+  for (const socket of accepted) socket.destroy()
+  silent.close()
 
   const elapsed = Date.now() - started
   assert.match(error.message, /produced nothing/)
-  assert.ok(elapsed < (RTSP_TIMEOUT_US / 1000) + 10000, `gave up in ${elapsed}ms`)
+  assert.ok(elapsed < watchdogMs + 10000, `gave up in ${elapsed}ms`)
   assert.strictEqual(remuxer.watchdog, null, 'the watchdog is cleared')
 })
 
