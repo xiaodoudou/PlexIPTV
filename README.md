@@ -4,11 +4,12 @@
 
 > An IPTV subscription as live TV in Plex, by pretending to be an HDHomeRun tuner
 
-![GitHub Release](https://img.shields.io/github/v/release/xiaodoudou/PlexIPTV?style=flat-square&color=e94560)
-![License](https://img.shields.io/badge/License-Apache--2.0-blue?style=flat-square)
-![GitHub Stars](https://img.shields.io/github/stars/xiaodoudou/PlexIPTV?style=flat-square&color=yellow)
-![Node](https://img.shields.io/badge/Node-%3E%3D22-339933?style=flat-square)
-![Streams](https://img.shields.io/badge/Streams-MPEG--TS%20%7C%20HLS%20%7C%20RTSP-blueviolet?style=flat-square)
+[![GitHub Release](https://img.shields.io/github/v/release/xiaodoudou/PlexIPTV?style=flat-square&color=e94560)](https://github.com/xiaodoudou/PlexIPTV/releases/latest)
+[![License](https://img.shields.io/badge/License-Apache--2.0-blue?style=flat-square)](https://github.com/xiaodoudou/PlexIPTV/blob/master/LICENSE)
+[![Stars](https://img.shields.io/github/stars/xiaodoudou/PlexIPTV?style=flat-square&color=yellow)](https://github.com/xiaodoudou/PlexIPTV/stargazers)
+[![Node](https://img.shields.io/badge/Node-%3E%3D22-339933?style=flat-square)](#os)
+[![Docker](https://img.shields.io/badge/Docker-image-2496ed?style=flat-square)](#docker)
+[![Streams](https://img.shields.io/badge/Streams-MPEG--TS%20%7C%20HLS%20%7C%20RTSP-blueviolet?style=flat-square)](#streams-and-formats)
 
 This app simulates a DVR device for Plex, so an IPTV subscription shows up as live TV. Point it at
 an m3u playlist or at an Xtream account and Plex sees an HDHomeRun tuner.
