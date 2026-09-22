@@ -240,6 +240,30 @@ function redactUrl (rawUrl) {
   return `${parsed.toString()}${hadQuery ? '?<redacted>' : ''}`
 }
 
+// A URL sitting inside a longer sentence: from the scheme up to the first
+// whitespace or quote.
+const URL_IN_TEXT = /[a-z][a-z0-9+.-]*:\/\/[^\s'"<>]+/gi
+// Punctuation that ends the sentence rather than the URL.
+const TRAILING_PUNCTUATION = /[.,;:!?)\]'"]+$/
+
+/**
+ * Redacts every URL embedded in a free text message.
+ *
+ * ffmpeg writes its diagnostics to stderr with the input URL quoted back
+ * verbatim, and those lines are forwarded to the log. The logger only scrubs
+ * credentials it was told about at startup, so a channel URL whose credentials
+ * came from a playlist rather than from settings would otherwise be written out
+ * in clear text.
+ */
+function redactUrlsInText (text) {
+  if (typeof text !== 'string') return String(text)
+  return text.replace(URL_IN_TEXT, (match) => {
+    const trailing = match.match(TRAILING_PUNCTUATION)
+    if (!trailing) return redactUrl(match)
+    return redactUrl(match.slice(0, match.length - trailing[0].length)) + trailing[0]
+  })
+}
+
 /**
  * Validates a channel URL, which may be RTSP as well as HTTP.
  */
@@ -266,5 +290,6 @@ module.exports = {
   extractCredentials,
   guardedLookup,
   isPrivateAddress,
-  redactUrl
+  redactUrl,
+  redactUrlsInText
 }

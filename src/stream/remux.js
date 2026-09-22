@@ -1,6 +1,7 @@
 const { spawn, spawnSync } = require('child_process')
 const EventEmitter = require('events')
 const Logger = new (require('../logger'))()
+const { redactUrlsInText } = require('../net/netGuard')
 
 // Most HLS streams ship MPEG-TS segments, which Plex accepts as-is. A minority
 // ship fragmented MP4, which cannot simply be concatenated into a transport
@@ -150,7 +151,10 @@ class Remuxer extends EventEmitter {
       if (this.watchdog.unref) this.watchdog.unref()
     }
     this.process.stderr.on('data', (chunk) => {
-      const message = chunk.toString().trim()
+      // ffmpeg quotes the input URL back in its diagnostics, credentials and
+      // all. Redact before the truncation, so a URL sitting past the 200th
+      // character cannot survive by being cut off mid-secret.
+      const message = redactUrlsInText(chunk.toString().trim())
       if (message.length > 0) Logger.verbose(`ffmpeg: ${message.slice(0, 200)}`)
     })
     this.process.on('error', (error) => {
