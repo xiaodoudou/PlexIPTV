@@ -69,3 +69,65 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run audit:prod
+
+  # The release publishes these images, so a Dockerfile that no longer builds,
+  # or an image that no longer starts, should show up here and not after a tag.
+  docker:
+    name: docker (${{ matrix.variant }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: debian
+            dockerfile: Dockerfile
+          - variant: alpine
+            dockerfile: Dockerfile-alpine
+    steps:
+      - uses: actions/checkout@v7
+
+      # x64 only and nothing is pushed. The release builds arm64 as well.
+      - name: Build the image
+        run: docker build -f ${{ matrix.dockerfile }} -t plexiptv:ci .
+
+      # What Unraid does: a host folder owned by root, and 99:100 asked for.
+      - name: Start it on a folder owned by root
+        run: |
+          sudo mkdir -m 755 "$RUNNER_TEMP/config"
+          docker run -d --name plexiptv -p 1234:1234 -e PUID=99 -e PGID=100 -v "$RUNNER_TEMP/config:/opt/PlexIPTV/config" plexiptv:ci
+
+      - name: Check it answers, running as 99:100
+        run: |
+          for attempt in $(seq 1 30); do
+            curl -fs -o /dev/null http://localhost:1234/discover.json && break
+            sleep 2
+          done
+          curl -fsS http://localhost:1234/discover.json
+          echo
+          owner="$(sudo stat -c '%u:%g' "$RUNNER_TEMP/config/settings.json")"
+          if [ "$owner" != "99:100" ]; then
+            echo "::error::settings.json belongs to $owner, expected 99:100"
+            exit 1
+          fi
+          # docker top needs the pid column to tell which processes are the
+          # container's. tini's own command line names src/index.js too.
+          uid="$(docker top plexiptv -o pid,uid,args | awk '$3 == "node" { print $2 }')"
+          if [ "$uid" != "99" ]; then
+            echo "::error::node runs as uid '$uid', expected 99"
+            exit 1
+          fi
+
+      - name: Check docker stop takes effect at once
+        run: |
+          started=$(date +%s)
+          docker stop plexiptv
+          took=$(( $(date +%s) - started ))
+          if [ "$took" -ge 5 ]; then
+            echo "::error::docker stop took ${took}s, so the signal is not reaching node"
+            exit 1
+          fi
+
+      - name: Show the container log
+        if: failure()
+        run: docker logs plexiptv || true
