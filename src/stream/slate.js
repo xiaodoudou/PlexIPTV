@@ -22,6 +22,7 @@ const FONT_CANDIDATES = [
   '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
   '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf',
   '/usr/share/fonts/TTF/DejaVuSans.ttf',
+  '/usr/share/fonts/dejavu/DejaVuSans.ttf',
   '/System/Library/Fonts/Helvetica.ttc',
   '/Library/Fonts/Arial.ttf'
 ]
