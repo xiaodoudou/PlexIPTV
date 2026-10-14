@@ -3,6 +3,16 @@
 ```
 current work in progress:
  - investigating why buffer is failing on some specific IPTV vendor
+ - every release publishes the Docker image again, as xiaodoudoufr/plexiptv
+   on Docker Hub, for amd64 and arm64. The newest one there was from 2018
+ - an Alpine build of the image is published alongside, under the -alpine tags
+ - the images include ffmpeg, so RTSP channels and fragmented MP4 HLS play in
+   Docker with nothing extra to install
+ - the image takes PUID and PGID, and starts as root only long enough to hand
+   its config folder to that user. A folder Docker created, owned by root, now
+   works instead of stopping the container. PlexIPTV itself never runs as root
+ - fixed: on Alpine, the message shown when a channel fails to play had no
+   text, because the font was looked for in the wrong place
 
 1.6.0:
  - "sources" takes a list, so several accounts and playlist URLs become one
