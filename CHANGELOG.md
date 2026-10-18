@@ -3,6 +3,8 @@
 ```
 current work in progress:
  - investigating why buffer is failing on some specific IPTV vendor
+
+1.6.1:
  - every release publishes the Docker image again, as xiaodoudoufr/plexiptv
    on Docker Hub, for amd64 and arm64. The newest one there was from 2018
  - an Alpine build of the image is published alongside, under the -alpine tags
