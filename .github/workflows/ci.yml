@@ -128,6 +128,46 @@ jobs:
             exit 1
           fi
 
+      # The docker-compose.yml people copy from the docs, as it is, on the image
+      # just built. Tokyo is far enough from UTC that a TZ left unread shows.
+      - name: Start it with docker-compose.yml
+        run: |
+          docker rm plexiptv
+          docker tag plexiptv:ci xiaodoudoufr/plexiptv:latest
+          mkdir "$RUNNER_TEMP/compose"
+          sed 's|TZ=Etc/UTC|TZ=Asia/Tokyo|' docker-compose.yml > "$RUNNER_TEMP/compose/docker-compose.yml"
+          grep -q 'TZ=Asia/Tokyo' "$RUNNER_TEMP/compose/docker-compose.yml"
+          cd "$RUNNER_TEMP/compose"
+          docker compose up -d --pull never
+
+      - name: Check it answers, logging in its config folder and in TZ
+        working-directory: ${{ runner.temp }}/compose
+        run: |
+          for attempt in $(seq 1 30); do
+            curl -fs -o /dev/null http://localhost:1234/discover.json && break
+            sleep 2
+          done
+          curl -fsS http://localhost:1234/discover.json
+          echo
+          offset="$(docker compose exec -T plexiptv node -p 'new Date().getTimezoneOffset()')"
+          if [ "$offset" != "-540" ]; then
+            echo "::error::node sees a UTC offset of '$offset' minutes, expected -540 for Asia/Tokyo"
+            exit 1
+          fi
+          log=config/logs/logs.txt
+          if ! sudo test -s "$log"; then
+            echo "::error::$log is missing or empty, so PLEXIPTV_LOGDIR was not used"
+            exit 1
+          fi
+          # The hour the container started in, or the one before if it just turned.
+          now="$(TZ=Asia/Tokyo date '+%Y/%m/%d %H:')"
+          before="$(TZ=Asia/Tokyo date -d '-10 min' '+%Y/%m/%d %H:')"
+          if ! sudo grep -qF -e "$now" -e "$before" "$log"; then
+            echo "::error::no line of $log is stamped with Tokyo time ($now)"
+            sudo head -n 5 "$log"
+            exit 1
+          fi
+
       - name: Show the container log
         if: failure()
         run: docker logs plexiptv || true
