@@ -9,6 +9,7 @@
   "scripts": {
     "test": "node --test",
     "lint": "eslint .",
+    "lint:commits": "node scripts/commitlint.js",
     "audit:prod": "npm audit --omit=dev",
     "start:docker": "node src/index.js -s ./config/settings.json",
     "start": "node src/index.js",

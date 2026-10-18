@@ -28,3 +28,26 @@ npm test
 ```
 
 Runs the suite with the built-in Node test runner, no test framework dependency. `npm run lint` checks style, and `npm run audit:prod` audits the dependencies that actually ship.
+
+## Commit messages
+
+Each commit, and each pull request title, starts with a type saying what kind of change it is:
+
+```
+fix: look for the DejaVu font where Alpine installs it
+feat(dashboard): show the source of each channel
+```
+
+The types are `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `security`, `ci`, `build`, `chore`, `style` and `revert`. A scope in brackets is optional, and `!` after the type or scope marks a breaking change. The subject has no full stop, the whole line is at most 100 characters, and a body, if there is one, comes after a blank line. Merge and revert commits that git writes itself are left alone.
+
+Pull requests are checked by the Commit messages workflow. To check your branch before pushing:
+
+```bash
+npm run lint:commits
+```
+
+Or have git check each commit as you make it:
+
+```bash
+git config core.hooksPath .githooks
+```
