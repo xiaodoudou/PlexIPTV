@@ -7,8 +7,8 @@ PlexIPTV is on Docker Hub as [`xiaodoudoufr/plexiptv`](https://hub.docker.com/r/
 | Tag | What you get |
 | --- | --- |
 | `latest` | The newest release, on Debian (`node:26-bookworm-slim`) |
-| `1.6.1`, `1.6` | A given release, or the newest patch of a minor version |
-| `alpine`, `1.6.1-alpine`, `1.6-alpine` | The same on Alpine (`node:26-alpine`), a smaller download |
+| `1.6.2`, `1.6` | A given release, or the newest patch of a minor version |
+| `alpine`, `1.6.2-alpine`, `1.6-alpine` | The same on Alpine (`node:26-alpine`), a smaller download |
 
 Avoid the `1.0.x` tags. They are from 2018 and miss nearly everything in the [changelog](https://github.com/xiaodoudou/PlexIPTV/blob/master/CHANGELOG.md).
 
