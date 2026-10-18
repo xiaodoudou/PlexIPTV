@@ -1,3 +1,6 @@
 # Shell scripts run inside the Linux images. A CRLF checkout on Windows would
 # break them in a locally built image.
 *.sh text eol=lf
+
+# Git hooks run under sh, on Windows too.
+.githooks/* text eol=lf

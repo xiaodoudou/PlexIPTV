@@ -1,0 +1,36 @@
+name: Commit messages
+
+# Separate from CI so that renaming a pull request rechecks its title without
+# cancelling and rerunning the whole suite.
+on:
+  pull_request:
+    branches: [master]
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: commits-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  commits:
+    name: commit messages
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # The range needs the whole branch, not just its tip.
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22.x
+      # The title goes through the environment, never into the script itself,
+      # so a title cannot run as shell.
+      - run: node scripts/commitlint.js "$BASE..$HEAD" --title "$TITLE"
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+          TITLE: ${{ github.event.pull_request.title }}
