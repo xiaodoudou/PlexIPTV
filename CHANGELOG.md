@@ -4,6 +4,12 @@
 current work in progress:
  - investigating why buffer is failing on some specific IPTV vendor
 
+1.6.2:
+ - a docker-compose.yml to copy, and the Docker page (also the Docker Hub
+   page) now starts with it. It sets PUID and PGID, TZ for the times in the
+   log, and keeps the log in the config folder so it outlives the container
+ - the Docker page lists the variables, the volume and the port in one place
+
 1.6.1:
  - every release publishes the Docker image again, as xiaodoudoufr/plexiptv
    on Docker Hub, for amd64 and arm64. The newest one there was from 2018
