@@ -41,7 +41,7 @@ jobs:
       - name: Install ffmpeg
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
 
-      # The full install: pkg and npm-run-all are devDependencies.
+      # The full install: pkg and npm-run-all2 are devDependencies.
       - run: npm ci
 
       # Guard against shipping a build that would not have passed CI.
