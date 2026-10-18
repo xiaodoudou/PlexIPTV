@@ -35,3 +35,6 @@ test
 
 # never commit: local security notes
 SECURITY.md
+
+# not needed inside the image
+docker-compose.yml

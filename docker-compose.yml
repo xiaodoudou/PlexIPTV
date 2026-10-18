@@ -1,0 +1,32 @@
+# PlexIPTV with Docker Compose. Copy this file into an empty folder, then run
+# `docker compose up -d` there. More in docs/docker.md.
+services:
+  plexiptv:
+    container_name: plexiptv
+    # latest is the Debian image. Use alpine for a smaller download, or pin a
+    # release such as 1.6 so an update only happens when you change it.
+    image: xiaodoudoufr/plexiptv:latest
+    restart: unless-stopped
+    environment:
+      # The user and group PlexIPTV runs as, and owns the config folder with.
+      # 99 and 100 on Unraid.
+      - PUID=1000
+      - PGID=1000
+      # Used for the times in the log.
+      - TZ=Etc/UTC
+      # Keeps logs.txt in the config folder, so it outlives the container.
+      - PLEXIPTV_LOGDIR=/opt/PlexIPTV/config/logs
+      # Uncomment to never run ffmpeg. RTSP and fragmented MP4 HLS channels
+      # then show why they cannot play instead.
+      # - PLEXIPTV_FFMPEG=none
+    volumes:
+      # settings.json and the cached playlist. Change ./config to keep them
+      # somewhere else, such as /srv/plexiptv.
+      - ./config:/opt/PlexIPTV/config
+    ports:
+      # host:container. Change the first number if 1234 is taken on the host,
+      # and give Plex that one.
+      - "1234:1234"
+    # Linux only: lets Plex discover the tuner by itself. Uncomment it and
+    # remove the ports section above, which this mode ignores.
+    # network_mode: host
