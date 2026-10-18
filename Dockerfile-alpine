@@ -1,6 +1,11 @@
 # See Dockerfile: node:carbon-alpine was Node 8 and is long past end of life.
 FROM node:26-alpine
 
+# See Dockerfile: ffmpeg plays RTSP and fragmented-MP4 HLS, the font is for the
+# slate shown when a channel fails, and tini passes docker stop on to node.
+# setpriv is part of util-linux on Debian but packaged on its own here.
+RUN apk add --no-cache ffmpeg font-dejavu setpriv tini
+
 WORKDIR /opt/PlexIPTV
 
 COPY package*.json ./
@@ -11,12 +16,13 @@ COPY . .
 
 RUN sed -i 's/iptv.m3u8/config\/iptv.m3u8/g' template.json \
  && mkdir -p ./config ./logs \
- && chown -R node:node /opt/PlexIPTV
+ && chown node:node ./config ./logs \
+ && chmod 755 docker/entrypoint.sh
 
 VOLUME ["/opt/PlexIPTV/config"]
 
-USER node
+ENTRYPOINT ["tini", "--", "/opt/PlexIPTV/docker/entrypoint.sh"]
 
 EXPOSE 1234
 
-CMD [ "npm", "run", "start:docker" ]
+CMD ["node", "src/index.js", "-s", "./config/settings.json"]
