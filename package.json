@@ -41,11 +41,11 @@
   },
   "devDependencies": {
     "@yao-pkg/pkg": "^6.22.0",
-    "eslint": "^8.57.1",
-    "eslint-config-standard": "^17.1.0",
-    "eslint-plugin-import": "^2.32.0",
-    "eslint-plugin-n": "^16.6.2",
-    "eslint-plugin-promise": "^6.6.0",
+    "eslint": "^10.14.0",
+    "neostandard": "^0.14.1",
     "npm-run-all2": "^9.0.3"
+  },
+  "overrides": {
+    "minimatch": "^11.0.1"
   }
 }
